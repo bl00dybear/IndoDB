@@ -1,3 +1,6 @@
+Promopt: i want to create from scratch a database management system with C and haskell for the parser. explain to me the arhitecture of the whole application, the operations tree for the parser, the pagination for the content stored as we expect it to be somewhat large. the database will be similar to the sqlite dmbs as it would all be in one file. we will use a b tree for efficient index searching, transactions and at first only basic sql statements for crud 
+
+
 Creating a **Database Management System (DBMS)** from scratch using **C** for the core engine and **Haskell** for the SQL parser is a challenging but rewarding project. Below, I will break down the **architecture**, **parser operation tree**, and **storage mechanisms** such as **pagination** and **B-tree indexing**.
 
 ---
