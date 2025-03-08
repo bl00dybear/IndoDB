@@ -22,6 +22,7 @@ typedef struct {
     ssize_t size;    // Size of the mapped file
     void *data;     // Pointer to the mapped memory region
     bool dirty;      // Flag to track if changes were made
+    int free_blocks; // Number of free blocks
 }db_file;
 
 struct node{

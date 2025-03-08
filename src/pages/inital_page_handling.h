@@ -1,7 +1,3 @@
-//
-// Created by h4rapa1b on 3/7/25.
-//
-
 #ifndef INITAL_PAGE_HANDLING_H
 #define INITAL_PAGE_HANDLING_H
 
@@ -14,9 +10,9 @@
 #include <sys/stat.h>
 
 #define PAGE_SIZE 4096  // 4 KiB pages
-#define INITIAL_DB_SIZE (PAGE_SIZE * 10)  // Initial size (10 pages)
-#define DB_FILENAME "database.db"
-#define JOURNAL_FILENAME "journal.db"
+#define INITIAL_DB_SIZE (PAGE_SIZE * 2)  // Initial size (10 pages)
+#define DB_FILENAME "database.bin"
+#define JOURNAL_FILENAME "journal.bin"
 
 // Database structure with memory mapping
 typedef struct {

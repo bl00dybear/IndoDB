@@ -1,7 +1,3 @@
-//
-// Created by h4rapa1b on 3/7/25.
-//
-
 #include "inital_page_handling.h"
 
 // Open the database file and map it into memory

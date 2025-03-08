@@ -8,9 +8,9 @@ int main() {
     db_start_transaction(db);
 
     // Modify a page in memory (write 'X' everywhere)
-    int page_num = 1;
+    int page_num = 0;
     char new_data[PAGE_SIZE];
-    memset(new_data, 'Y', PAGE_SIZE);
+    memset(new_data, 'A', PAGE_SIZE);
     db_write_page(db, page_num, new_data);
 
     // User chooses whether to commit or rollback
@@ -27,3 +27,4 @@ int main() {
     db_close(db);
     return 0;
 }
+ 
