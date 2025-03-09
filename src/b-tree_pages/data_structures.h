@@ -1,14 +1,8 @@
 #ifndef A07437FB_09F9_4970_9687_F598D9165B3C
 #define A07437FB_09F9_4970_9687_F598D9165B3C
  
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdbool.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
+
+#include "libraries.h"
 
 #define PAGE_SIZE 4096  // 4 KiB pages
 #define NODE_MAX_KEYS 3  // Maximum number of keys a node can hold
