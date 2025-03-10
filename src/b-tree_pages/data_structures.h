@@ -27,4 +27,9 @@ struct node{
 
 struct node *root;
 
+typedef struct queue_node {
+    int data;
+    struct queue_node* next;
+} queue_node;
+
 #endif /* A07437FB_09F9_4970_9687_F598D9165B3C */
