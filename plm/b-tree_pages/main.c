@@ -76,7 +76,7 @@ void write_on_memory_block(db_file *db, void* new_data){
         block_index = (db->size/PAGE_SIZE) - 1;
     }
     else{
-        //implement queue tp store free blocks
+        //implement queue to store free blocks
     }  
     printf("Block index %d\n",block_index);
 
@@ -120,7 +120,7 @@ void cli_interactions(db_file* db){
     printf("4. Print the tree\n");
     printf("5. Commit changes\n");
     printf("6. Exit\n");
-
+    
     int choice;
     scanf("%d", &choice);
 
