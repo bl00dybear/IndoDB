@@ -8,6 +8,7 @@
 
 #include "data_structures.h"
 #include "config.h"
+#include "queue.h"
 
 struct RowNode *create_node(const int val, struct RowNode *child) {
     struct RowNode *newNode = (struct RowNode *)malloc(sizeof(struct RowNode));
@@ -15,9 +16,13 @@ struct RowNode *create_node(const int val, struct RowNode *child) {
     newNode->num_keys = 1;
     newNode->plink[0] = root;
     newNode->plink[1] = child;//la root aici practic il pune pe NULL
-    newNode->page_num = 1;
-    // newNode->link[0] = root->page_num;
-    // newNode->link[1] = child->page_num;
+    newNode->page_num = front(free_page_queue);
+    pop(free_page_queue);
+    if(root != NULL)
+        newNode->link[0] = root->page_num;
+    
+    if(child != NULL)
+        newNode->link[1] = child->page_num;
     return newNode;
 }
 
@@ -41,7 +46,8 @@ void insert_node(const int val, const int pos, struct RowNode *node, struct RowN
 
     node->keys[j + 1] = val;  // Insert value at correct position
     node->plink[j + 1] = child;  // Adjust child plink
-    // node->link[j + 1] = child->page_num;  // Adjust child link
+    if(child != NULL)
+        node->link[j + 1] = child->page_num;  // Adjust child link
     node->num_keys += 1;  // Increment num_keys of values
 }
 
@@ -82,8 +88,14 @@ void split_node(const int val, int *pval, const int pos, struct RowNode *node, s
     // Update num_keyss
     node->num_keys = median;
     (*newNode)->num_keys = ROW_MAX_KEYS - median;
+
+
+
+
+
     //functie de request a unei pagini goale
-    (*newNode)->page_num = node->page_num + 1;
+    (*newNode)->page_num = front(free_page_queue);
+    pop(free_page_queue);
 
     // Insert the new value into the appropriate node (left or right)
     if (pos <= ROW_MIN_KEYS) {
@@ -97,7 +109,7 @@ void split_node(const int val, int *pval, const int pos, struct RowNode *node, s
 
     // Adjust child pointers
     (*newNode)->plink[0] = node->plink[node->num_keys];
-    (*newNode)->link[0] = node->link[node->num_keys];
+    (*newNode)->link[0] = node->page_num;
     node->num_keys--;
 }
 
@@ -190,7 +202,7 @@ void traversal(const struct RowNode *myNode) {
             traversal(myNode->plink[i]);
             printf("Node num %ld, ", myNode->keys[i + 1]);
             printf("Node page %ld \n", myNode->page_num);
-            printf("Node link %ld %ld %ld\n", myNode->link[0],myNode->link[1],myNode->link[2]);
+            // printf("Node link %ld %ld %ld\n\n", myNode->link[0],myNode->link[1],myNode->link[2]);
         }
 
         traversal(myNode->plink[i]);
@@ -228,8 +240,10 @@ void shift_left(struct RowNode *node, const int pos) {
     for (int i = pos; i < node->num_keys; i++) {
         node->keys[i] = node->keys[i + 1];
         node->plink[i] = node->plink[i + 1];
+        node->link[i] = node->link[i + 1];
     }
     node->plink[node->num_keys] = node->plink[node->num_keys + 1];
+    node->link[node->num_keys] = node->link[node->num_keys + 1];
     node->num_keys--;
 }
 
@@ -252,6 +266,9 @@ void delete_value(struct RowNode *node, const int val) {
         if (node->plink[pos - 1] == NULL) {
             // Case 1: Leaf node - Simply remove the value
             shift_left(node, pos);
+            if(node->num_keys == 0)
+                push(free_page_queue,node->page_num);
+            printf("Value %ld deleted from the tree\n", node->page_num);
         } else {
             // Case 2: Internal node - Replace with predecessor or successor
             if (node->plink[pos - 1] != NULL) {
@@ -284,6 +301,7 @@ void delete_value_from_tree(const int val) {
         printf("Tree is empty\n");
         return;
     }
+
 
     delete_value(root, val);
 

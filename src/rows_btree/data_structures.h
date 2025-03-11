@@ -24,4 +24,17 @@ typedef struct RowNode{
 
 RowNode *root;
 
+typedef struct QueueNode {
+    int data;
+    struct QueueNode* next;
+} QueueNode;
+
+typedef struct {
+    QueueNode* front;  // Primul element (capul cozii)
+    QueueNode* rear;   // Ultimul element (coada cozii)
+} Queue;
+
+Queue* free_page_queue ;
+
+
 #endif /* EE4AC2EA_E38F_4F62_9377_375DE5CE0648 */

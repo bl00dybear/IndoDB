@@ -3,6 +3,9 @@
 #include "memory_op.h"
 #include "data_structures.h"
 #include "row_btree_op.h"
+#include "queue.h"
+
+
 
 
 void cli_interactions(){
@@ -40,8 +43,11 @@ void cli_interactions(){
                 search(search_val, &pos, root);
                 break;
             case 4:
+                printf("Root nums  %ld, %ld, %ld\n", root->keys[1],root->keys[2],root->keys[3]);
+
                 traversal(root);
                 printf("\n");
+                RowNode *temp = root;
                 break;
             case 5:
 
@@ -82,6 +88,16 @@ int main(){
     set_new_file_free_blocks(db);
 
     printf("%d %ld\n",db->fd,db->size);
+
+    free_page_queue = create_queue();
+  
+    for(int i=1;i<=10;i+=1){
+        push(free_page_queue,i);
+    }
+
+
+
+
 
     cli_interactions(db);
 
