@@ -1,17 +1,7 @@
-#ifndef B34774E5_001E_434B_912C_9B074E2A444A
-#define B34774E5_001E_434B_912C_9B074E2A444A
+#ifndef F1EC1245_5B68_4E95_AE9A_5831D696CE9C
+#define F1EC1245_5B68_4E95_AE9A_5831D696CE9C
 
-#include "libraries.h"
 #include "data_structures.h"
-
-
-// Definim structura cozii
-typedef struct {
-    queue_node* front;  // Primul element (capul cozii)
-    queue_node* rear;   // Ultimul element (coada cozii)
-} Queue;
-
-// Inițializare coadă
 Queue* create_queue() {
     Queue* queue = (Queue*)malloc(sizeof(Queue));
     queue->front = queue->rear = NULL;
@@ -25,7 +15,7 @@ bool is_empty(Queue* queue) {
 
 // Adaugă un element în coadă (enqueue)
 void push(Queue* queue, int value) {
-    queue_node* new_queue_node = (queue_node*)malloc(sizeof(queue_node));
+    QueueNode* new_queue_node = (QueueNode*)malloc(sizeof(QueueNode));
     if (!new_queue_node) {
         printf("Eroare: Memorie insuficientă!\n");
         return;
@@ -48,7 +38,7 @@ int pop(Queue* queue) {
         printf("Eroare: Coada este goală!\n");
         return -1;
     }
-    queue_node* temp = queue->front;
+    QueueNode* temp = queue->front;
     int removed_value = temp->data;
     queue->front = queue->front->next;
 
@@ -75,7 +65,7 @@ void display(Queue* queue) {
         printf("Coada este goală!\n");
         return;
     }
-    queue_node* temp = queue->front;
+    QueueNode* temp = queue->front;
     printf("Elementele cozii: ");
     while (temp != NULL) {
         printf("%d ", temp->data);
@@ -92,4 +82,4 @@ void free_queue(Queue* queue) {
     free(queue);
 }
 
-#endif /* B34774E5_001E_434B_912C_9B074E2A444A */
+#endif /* F1EC1245_5B68_4E95_AE9A_5831D696CE9C */
