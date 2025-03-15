@@ -38,22 +38,26 @@ parseSQL input =
     if not (";" `isSuffixOf` trimmedInput)
         then Nothing
         else case words (init trimmedInput) of
-            ("SELECT":"*":"FROM":table:whereClause) ->
+            ("SELECT":"*":"FROM":table:whereClause) -> 
                 Just (SelectStmt ["*"] table (parseWhere whereClause))
             ("SELECT":cols) -> let (columnList, rest) = break (== "FROM") cols in
                                 if "*" `elem` columnList && length columnList > 1
-                                    then Nothing
+                                    then Nothing  -- Blocăm sintaxa invalidă
                                     else case rest of
-                                        (_:table:whereClause) -> let (whereKey, whereExpr) = break (== "WHERE") whereClause in
-                                                                  Just (SelectStmt (map (filter (/= ',')) columnList) table (parseWhere (drop 1 whereExpr)))
+                                        (_:table:whereClause) -> 
+                                            let (whereKey, whereExpr) = break (== "WHERE") whereClause in
+                                            Just (SelectStmt (map (filter (/= ',')) columnList) table (parseWhere (drop 1 whereExpr)))
                                         _ -> Nothing
             ("CREATE":"TABLE":table:cols) -> Just (CreateStmt table (parseColumns cols))
-            ("INSERT":"INTO":table:values) -> let (colPart, valPart) = break (== "VALUES") values in
-                                                Just (InsertStmt table colPart (tail valPart))
-            ("UPDATE":table:updates) -> let (setPart, wherePart) = break (== "WHERE") updates in
-                                         Just (UpdateStmt table (parseSet (unwords setPart)) (parseWhere (tail wherePart)))
+            ("INSERT":"INTO":table:values) -> 
+                let (colPart, valPart) = break (== "VALUES") values in
+                Just (InsertStmt table colPart (tail valPart))
+            ("UPDATE":table:updates) -> 
+                let (setPart, wherePart) = break (== "WHERE") updates in
+                Just (UpdateStmt table (parseSet (unwords setPart)) (parseWhere (tail wherePart)))
             ("DROP":"TABLE":table:_) -> Just (DropStmt table)
             _ -> Nothing
+
 
 parseColumns :: [String] -> [(String, String)]
 parseColumns cols = [(c, "TEXT") | c <- cols]

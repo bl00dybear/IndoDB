@@ -1,1 +1,1 @@
-{"type": "SELECT", "columns": ["*","col"], "table": "table"}
+{ "type": "SELECT", "columns": ["*", "col"], "table": "table" }
