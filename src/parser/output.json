@@ -1,0 +1,1 @@
+{"type": "CREATE", "table": "angajati(nume_angajat", "columns": [("varchar(255),","TEXT"),("prenume_angajat","TEXT"),("varchar(255),","TEXT"),("salariu","TEXT"),("int);","TEXT")]}
