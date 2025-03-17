@@ -12,7 +12,7 @@ import Control.Monad (void)
 
 data SQLStatement
     = SelectStmt [String] String (Maybe Condition)
-    | CreateStmt String [(String, String)]
+    | CreateStmt String [(String, String, String)]
     | InsertStmt String [String] [String]
     | UpdateStmt String [(String, String)] (Maybe Condition)
     | DropStmt String
@@ -45,8 +45,15 @@ parseCreate :: Parser SQLStatement
 parseCreate = do
     void $ string "CREATE TABLE "
     table <- identifier
-    cols <- between (char '(') (char ')') (sepBy ((,) <$> identifier <*> identifier) (string ", "))
+    cols <- between (char '(') (char ')') (sepBy parseColumn (string ", "))
     return $ CreateStmt table cols
+
+parseColumn :: Parser (String, String, String)
+parseColumn = do
+    colName <- identifier
+    colType <- identifier
+    colConstraint <- option "" identifier
+    return (colName, colType, colConstraint)
 
 parseInsert :: Parser SQLStatement
 parseInsert = do
@@ -77,14 +84,20 @@ parseWhere = do
     Equals <$> identifier <*> (string " = " *> identifier)
 
 parseSQL :: Parser SQLStatement
-parseSQL = try parseSelect <|> try parseCreate <|> try parseInsert <|> try parseUpdate <|> parseDrop
+parseSQL = do
+    stmt <- try parseSelect <|> try parseCreate <|> try parseInsert <|> try parseUpdate <|> parseDrop
+    void $ char ';'
+    return stmt
 
 main :: IO ()
 main = do
     input <- getLine
-    case parse parseSQL "SQL statement" input of
-        Left err -> putStrLn $ "unknown command: " ++ show err
+    case parse (parseSQL <* eof) "SQL statement" input of
+        Left err ->
+            if last input /= ';' then
+                putStrLn "Syntax error: Query must end with ';'"
+            else
+                putStrLn $ "Syntax error: " ++ show err
         Right ast -> do
             let jsonOutput = encode ast
-            B.writeFile "output.json" jsonOutput
-
+            B.writeFile "./src/output.json" jsonOutput
