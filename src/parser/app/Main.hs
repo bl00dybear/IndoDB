@@ -2,9 +2,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, encode)
+import Data.Aeson (ToJSON, encode, Value(Null))
 import qualified Data.ByteString.Lazy.Char8 as B
 import Text.Parsec
+import Data.List (isInfixOf)
 import Text.Parsec.String
 import Control.Monad (void)
 import Data.Functor ((<$>), ($>))
@@ -15,7 +16,7 @@ data ConstraintType = NotNull | PrimaryKey | ForeignKey
 data SQLStatement
     = SelectStmt [String] String (Maybe Condition)
     | CreateStmt String [(String, String, Maybe ConstraintType)]
-    | InsertStmt String [String] [String]
+    | InsertStmt String (Maybe [String]) [String]
     | UpdateStmt String [(String, String)] (Maybe Condition)
     | DropStmt String
     deriving (Show, Generic, ToJSON)
@@ -70,11 +71,19 @@ parseCreate = do
 parseInsert :: Parser SQLStatement
 parseInsert = do
     void $ string "INSERT INTO "
+    spaces
     table <- identifier
-    cols <- between (char '(') (char ')') (sepBy identifier (string ", "))
-    void $ string " VALUES "
-    values <- between (char '(') (char ')') (sepBy identifier (string ", "))
-    return $ InsertStmt table cols values
+    spaces
+    cols <- optionMaybe $ try (between (char '(' *> spaces) (spaces *> char ')') (sepBy identifier (spaces *> char ',' *> spaces)))
+    spaces
+    void $ string "VALUES"
+    spaces
+    values <- between (char '(' *> spaces) (spaces *> char ')') (sepBy identifier (spaces *> char ',' *> spaces))
+
+    case cols of
+        Just colList | length colList /= length values ->
+            fail "Syntax error: Number of columns does not match number of values."
+        _ -> return $ InsertStmt table cols values
 
 parseUpdate :: Parser SQLStatement
 parseUpdate = do
@@ -98,18 +107,17 @@ parseWhere = do
 parseSQL :: Parser SQLStatement
 parseSQL = do
     stmt <- try parseSelect <|> try parseCreate <|> try parseInsert <|> try parseUpdate <|> parseDrop
-    void $ char ';'
+    spaces
+    _ <- char ';'
     return stmt
 
 main :: IO ()
 main = do
     input <- getLine
-    case parse (parseSQL <* eof) "SQL statement" input of
-        Left err ->
-            if last input /= ';' then
-                putStrLn "Syntax error: Query must end with ';'"
-            else
-                putStrLn $ "Syntax error: " ++ show err
+    case parse (parseSQL <* eof) "" input of
+        Left err -> do
+            print err
+            B.writeFile "./src/output.json" (encode Null)
         Right ast -> do
             let jsonOutput = encode ast
             B.writeFile "./src/output.json" jsonOutput

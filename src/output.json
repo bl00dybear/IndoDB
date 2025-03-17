@@ -1,11 +1,1 @@
-{
-  "contents": [
-    "users",
-    [
-      ["id", "INT", "PrimaryKey"],
-      ["name", "TEXT", "Null"],
-      ["age", "INT", null]
-    ]
-  ],
-  "tag": "CreateStmt"
-}
+null
