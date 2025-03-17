@@ -3,8 +3,8 @@
 
 #define PAGE_SIZE 4096
 #define INITIAL_DB_SIZE PAGE_SIZE 
-#define ROW_MAX_KEYS 3
-#define ROW_MIN_KEYS 2
+#define ROW_MAX_KEYS 169
+#define ROW_MIN_KEYS 86
 #define DB_FILENAME "database.bin"
 
 #endif /* C4CB206E_5775_4820_862F_88A5FC375C12 */
