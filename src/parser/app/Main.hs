@@ -9,7 +9,7 @@ import Text.Parsec.String
 import Control.Monad (void)
 import Data.Functor ((<$>), ($>))
 
-data ConstraintType = Null | PrimaryKey | ForeignKey
+data ConstraintType = NotNull | PrimaryKey | ForeignKey
     deriving (Show, Generic, ToJSON)
 
 data SQLStatement
@@ -38,7 +38,7 @@ parseConstraint :: Parser ConstraintType
 parseConstraint = choice
     [ try (string "PRIMARY KEY" $> PrimaryKey)
     , try (string "FOREIGN KEY" $> ForeignKey)
-    , string "NULL" $> Null
+    , string "NOT NULL" $> NotNull
     ]
 
 parseColumn :: Parser (String, String, Maybe ConstraintType)
