@@ -7,12 +7,14 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import Text.Parsec
 import Text.Parsec.String
 import Control.Monad (void)
+import Data.Functor ((<$>), ($>))
 
--- Definirea tipurilor de date pentru AST
+data ConstraintType = Null | PrimaryKey | ForeignKey
+    deriving (Show, Generic, ToJSON)
 
 data SQLStatement
     = SelectStmt [String] String (Maybe Condition)
-    | CreateStmt String [(String, String, String)]
+    | CreateStmt String [(String, String, Maybe ConstraintType)]
     | InsertStmt String [String] [String]
     | UpdateStmt String [(String, String)] (Maybe Condition)
     | DropStmt String
@@ -32,6 +34,22 @@ data Condition
 identifier :: Parser String
 identifier = many1 (letter <|> digit <|> char '_')
 
+parseConstraint :: Parser ConstraintType
+parseConstraint = choice
+    [ try (string "PRIMARY KEY" $> PrimaryKey)
+    , try (string "FOREIGN KEY" $> ForeignKey)
+    , string "NULL" $> Null
+    ]
+
+parseColumn :: Parser (String, String, Maybe ConstraintType)
+parseColumn = do
+    colName <- identifier
+    spaces
+    colType <- identifier
+    spaces
+    colConstraint <- optionMaybe (try (spaces *> parseConstraint))
+    return (colName, colType, colConstraint)
+
 parseSelect :: Parser SQLStatement
 parseSelect = do
     void $ string "SELECT "
@@ -45,15 +63,9 @@ parseCreate :: Parser SQLStatement
 parseCreate = do
     void $ string "CREATE TABLE "
     table <- identifier
-    cols <- between (char '(') (char ')') (sepBy parseColumn (string ", "))
+    spaces
+    cols <- between (char '(' *> spaces) (spaces *> char ')') (sepBy parseColumn (spaces *> char ',' *> spaces))
     return $ CreateStmt table cols
-
-parseColumn :: Parser (String, String, String)
-parseColumn = do
-    colName <- identifier
-    colType <- identifier
-    colConstraint <- option "" identifier
-    return (colName, colType, colConstraint)
 
 parseInsert :: Parser SQLStatement
 parseInsert = do
