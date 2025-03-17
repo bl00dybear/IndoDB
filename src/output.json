@@ -1,1 +1,11 @@
-null
+{
+  "contents": [
+    "tabel",
+    [
+      ["ceva", "val"],
+      ["altceva", "val"]
+    ],
+    null
+  ],
+  "tag": "UpdateStmt"
+}

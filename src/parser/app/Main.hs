@@ -9,13 +9,17 @@ import Data.List (isInfixOf)
 import Text.Parsec.String
 import Control.Monad (void)
 import Data.Functor ((<$>), ($>))
+import Data.Data (Data)
 
 data ConstraintType = NotNull | PrimaryKey | ForeignKey
     deriving (Show, Generic, ToJSON)
 
+data DataType = Int | Float | Bit | VarChar | Date
+    deriving (Show, Generic, ToJSON)
+
 data SQLStatement
     = SelectStmt [String] String (Maybe Condition)
-    | CreateStmt String [(String, String, Maybe ConstraintType)]
+    | CreateStmt String [(String, DataType, Maybe ConstraintType)]
     | InsertStmt String (Maybe [String]) [String]
     | UpdateStmt String [(String, String)] (Maybe Condition)
     | DropStmt String
@@ -30,8 +34,6 @@ data Condition
     | Not Condition
     deriving (Show, Generic, ToJSON)
 
--- Definirea parserului folosind Parsec
-
 identifier :: Parser String
 identifier = many1 (letter <|> digit <|> char '_')
 
@@ -39,14 +41,23 @@ parseConstraint :: Parser ConstraintType
 parseConstraint = choice
     [ try (string "PRIMARY KEY" $> PrimaryKey)
     , try (string "FOREIGN KEY" $> ForeignKey)
-    , string "NOT NULL" $> NotNull
+    , try (string "NOT NULL" $> NotNull)
+    ]
+    
+parseDataType :: Parser DataType
+parseDataType = choice
+    [ try (string "INT" $> Int)
+    , try (string "FLOAT" $> Float)
+    , try (string "VARCHAR" $> VarChar)
+    , try (string "BIT" $> Bit)
+    , try (string "DATE" $> Date)
     ]
 
-parseColumn :: Parser (String, String, Maybe ConstraintType)
+parseColumn :: Parser (String, DataType, Maybe ConstraintType)
 parseColumn = do
     colName <- identifier
     spaces
-    colType <- identifier
+    colType <- parseDataType
     spaces
     colConstraint <- optionMaybe (try (spaces *> parseConstraint))
     return (colName, colType, colConstraint)
