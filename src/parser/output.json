@@ -1,1 +1,1 @@
-{ "type": "SELECT", "columns": ["*", "col"], "table": "table" }
+{ "contents": [["col1"], "table", null], "tag": "SelectStmt" }

@@ -1,0 +1,6 @@
+cradle:
+  cabal:
+    - path: "./app"
+      component: "parser:exe:parser"
+      dependencies:
+        - bytestring
