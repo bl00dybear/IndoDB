@@ -1,6 +1,0 @@
-#define PAGE_SIZE 4096
-#define DB_FILENAME "database.bin"
-#define TABLE_MAX_KEYS 102
-#define TABLE_MIN_KEYS 51
-#define TABLE_NAME_LENGTH 32
-#define INITIAL_DB_SIZE PAGE_SIZE
