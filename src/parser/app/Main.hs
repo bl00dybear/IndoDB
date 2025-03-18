@@ -11,10 +11,19 @@ import Control.Monad (void)
 import Data.Functor ((<$>), ($>))
 import Data.Data (Data)
 
+-- data definition:
+
+data SQLValue
+    = SQLString String
+    | SQLInt Int
+    | SQLFloat Float
+    | SQLDate String
+    deriving (Show, Generic, ToJSON)
+
 data ConstraintType = NotNull | PrimaryKey | ForeignKey
     deriving (Show, Generic, ToJSON)
 
-data DataType = Int | Float | Bit | VarChar | Date
+data DataType = Int | Float | VarChar | Date
     deriving (Show, Generic, ToJSON)
 
 data SQLStatement
@@ -34,8 +43,43 @@ data Condition
     | Not Condition
     deriving (Show, Generic, ToJSON)
 
+-- utils:
+
 identifier :: Parser String
 identifier = many1 (letter <|> digit <|> char '_')
+
+parseValue :: Parser SQLValue
+parseValue = try parseString
+         <|> try parseFloat
+         <|> try parseInt
+         <|> try parseDate
+
+parseString :: Parser SQLValue
+parseString = do
+    char '\''
+    str <- manyTill anyChar (char '\'')
+    return $ SQLString str
+
+parseInt :: Parser SQLValue
+parseInt = SQLInt . read <$> many1 digit
+
+parseFloat :: Parser SQLValue
+parseFloat = do
+    num <- many1 digit
+    char '.'
+    frac <- many1 digit
+    return $ SQLFloat (read (num ++ "." ++ frac))
+
+parseDate :: Parser SQLValue
+parseDate = do
+    char '\''
+    year <- count 4 digit
+    char '-'
+    month <- count 2 digit
+    char '-'
+    day <- count 2 digit
+    char '\''
+    return $ SQLDate (year ++ "-" ++ month ++ "-" ++ day)
 
 parseConstraint :: Parser ConstraintType
 parseConstraint = choice
@@ -43,13 +87,12 @@ parseConstraint = choice
     , try (string "FOREIGN KEY" $> ForeignKey)
     , try (string "NOT NULL" $> NotNull)
     ]
-    
+
 parseDataType :: Parser DataType
 parseDataType = choice
     [ try (string "INT" $> Int)
     , try (string "FLOAT" $> Float)
     , try (string "VARCHAR" $> VarChar)
-    , try (string "BIT" $> Bit)
     , try (string "DATE" $> Date)
     ]
 
@@ -62,10 +105,21 @@ parseColumn = do
     colConstraint <- optionMaybe (try (spaces *> parseConstraint))
     return (colName, colType, colConstraint)
 
+parseAssignment :: Parser (String, String)
+parseAssignment = do
+    colName <- identifier
+    spaces
+    void $ char '='
+    spaces
+    value <- parseValue
+    return (colName, show value)
+
+-- parse statements:
+
 parseSelect :: Parser SQLStatement
 parseSelect = do
     void $ string "SELECT "
-    cols <- sepBy identifier (string ", ")
+    cols <- try (string "*" $> ["*"]) <|> sepBy identifier (string ", ")
     void $ string " FROM "
     table <- identifier
     cond <- optionMaybe parseWhere
@@ -89,19 +143,21 @@ parseInsert = do
     spaces
     void $ string "VALUES"
     spaces
-    values <- between (char '(' *> spaces) (spaces *> char ')') (sepBy identifier (spaces *> char ',' *> spaces))
+    values <- between (char '(' *> spaces) (spaces *> char ')') (sepBy parseValue (spaces *> char ',' *> spaces))
 
     case cols of
         Just colList | length colList /= length values ->
             fail "Syntax error: Number of columns does not match number of values."
-        _ -> return $ InsertStmt table cols values
+        _ -> return $ InsertStmt table cols (map show values)
 
 parseUpdate :: Parser SQLStatement
 parseUpdate = do
     void $ string "UPDATE "
     table <- identifier
-    void $ string " SET "
-    updates <- sepBy ((,) <$> identifier <*> (string " = " *> identifier)) (string ", ")
+    spaces
+    void $ string "SET"
+    spaces
+    updates <- sepBy parseAssignment (spaces *> char ',' *> spaces)
     cond <- optionMaybe parseWhere
     return $ UpdateStmt table updates cond
 
@@ -121,6 +177,8 @@ parseSQL = do
     spaces
     _ <- char ';'
     return stmt
+
+-- main:
 
 main :: IO ()
 main = do
