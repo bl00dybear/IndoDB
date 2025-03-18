@@ -1,29 +1,56 @@
-//#include "storage_mmap.c"
-#include "pages/inital_page_handling.c"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_INPUT_SIZE 1024
 
 int main() {
-    DBFile* db = db_open(DB_FILENAME);
+    char input[MAX_INPUT_SIZE];
+    char line[MAX_INPUT_SIZE];
+    
+    // Clear screen before displaying prompt
+    printf("\033[H\033[J");
+    
+    while (1) {
+        printf("IndoDB> ");
+        input[0] = '\0';
 
-    // Start a transaction (save snapshot)
-    db_start_transaction(db);
+        while (fgets(line, sizeof(line), stdin)) {
+            size_t len = strlen(line);
+            if (len > 0 && line[len - 1] == '\n') {
+                line[len - 1] = '\0';
+                len--;
+            }
+            
+            if (strcmp(line, "EXIT;") == 0) {
+                printf("Exiting IndoDB CLI...\n");
+                return 0;
+            }
+            
+            strcat(input, line);
+            strcat(input, " ");
 
-    // Modify a page in memory (write 'X' everywhere)
-    int page_num = 1;
-    char new_data[PAGE_SIZE];
-    memset(new_data, 'Y', PAGE_SIZE);
-    db_write_page(db, page_num, new_data);
-
-    // User chooses whether to commit or rollback
-    char choice;
-    printf("Commit changes? (y/n): ");
-    scanf(" %c", &choice);
-
-    if (choice == 'y') {
-        db_commit(db);
-    } else {
-        db_rollback(db);
+            // Check if the last non-space character is ';'
+            char *trimmed = input + strlen(input) - 1;
+            while (trimmed >= input && *trimmed == ' ') {
+                trimmed--;
+            }
+            if (*trimmed == ';') {
+                break;
+            }
+            
+            printf("      > ");
+        }
+        
+        if (strlen(input) > 0) {
+            FILE *fp = popen("./src/parser/sql_parser", "w");
+            if (fp == NULL) {
+                perror("Error opening pipe");
+                return 1;
+            }
+            fprintf(fp, "%s\n", input);
+            pclose(fp);
+        }
     }
-
-    db_close(db);
     return 0;
 }

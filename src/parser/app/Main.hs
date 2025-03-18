@@ -2,14 +2,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, encode, Value(Null))
+import Data.Aeson (ToJSON (toJSON), encode, object, (.=), Value(Null))
 import qualified Data.ByteString.Lazy.Char8 as B
 import Text.Parsec
-import Data.List (isInfixOf)
 import Text.Parsec.String
 import Control.Monad (void)
-import Data.Functor ((<$>), ($>))
-import Data.Data (Data)
+import Data.Functor (($>))
 
 -- data definition:
 
@@ -18,13 +16,25 @@ data SQLValue
     | SQLInt Int
     | SQLFloat Float
     | SQLDate String
-    deriving (Show, Generic, ToJSON)
+    deriving (Show, Generic)
+
+instance ToJSON SQLValue where
+    toJSON (SQLString s) = object ["valueType" .= ("String" :: String), "value" .= s]
+    toJSON (SQLInt i) = object ["valueType" .= ("Int" :: String), "value" .= i]
+    toJSON (SQLFloat f) = object ["valueType" .= ("Float" :: String), "value" .= f]
+    toJSON (SQLDate d) = object ["valueType" .= ("Date" :: String), "value" .= d]
 
 data ConstraintType = NotNull | PrimaryKey | ForeignKey
     deriving (Show, Generic, ToJSON)
 
-data DataType = Int | Float | VarChar | Date
-    deriving (Show, Generic, ToJSON)
+data DataType = IntType | FloatType | VarCharType | DateType
+    deriving (Show, Generic)
+
+instance ToJSON DataType where
+    toJSON IntType = "Int"
+    toJSON FloatType = "Float"
+    toJSON VarCharType = "VarChar"
+    toJSON DateType = "Date"
 
 data SQLStatement
     = SelectStmt [String] String (Maybe Condition)
@@ -32,7 +42,36 @@ data SQLStatement
     | InsertStmt String (Maybe [String]) [String]
     | UpdateStmt String [(String, String)] (Maybe Condition)
     | DropStmt String
-    deriving (Show, Generic, ToJSON)
+    deriving (Show, Generic)
+
+instance ToJSON SQLStatement where
+    toJSON (SelectStmt cols table cond) = object
+        [ "statement" .= ("SelectStmt" :: String)
+        , "table" .= table
+        , "columns" .= cols
+        , "condition" .= cond
+        ]
+    toJSON (CreateStmt table cols) = object
+        [ "statement" .= ("CreateStmt" :: String)
+        , "table" .= table
+        , "columns" .= map (\(n, t, c) -> object ["name" .= n, "type" .= t, "constraint" .= c]) cols
+        ]
+    toJSON (InsertStmt table cols values) = object
+        [ "statement" .= ("InsertStmt" :: String)
+        , "table" .= table
+        , "columns" .= cols
+        , "values" .= values
+        ]
+    toJSON (UpdateStmt table updates cond) = object
+        [ "statement" .= ("UpdateStmt" :: String)
+        , "table" .= table
+        , "updates" .= map (\(col, val) -> object ["column" .= col, "value" .= val]) updates
+        , "condition" .= cond
+        ]
+    toJSON (DropStmt table) = object
+        [ "statement" .= ("DropStmt" :: String)
+        , "table" .= table
+        ]
 
 data Condition
     = Equals String String
@@ -41,37 +80,48 @@ data Condition
     | And Condition Condition
     | Or Condition Condition
     | Not Condition
-    deriving (Show, Generic, ToJSON)
+    deriving (Show, Generic)
+
+instance ToJSON Condition where
+    toJSON (Equals col val) = object ["type" .= ("Equals" :: String), "column" .= col, "value" .= val]
+    toJSON (GreaterThan col val) = object ["type" .= ("GreaterThan" :: String), "column" .= col, "value" .= val]
+    toJSON (LessThan col val) = object ["type" .= ("LessThan" :: String), "column" .= col, "value" .= val]
+    toJSON (And c1 c2) = object ["type" .= ("And" :: String), "left" .= c1, "right" .= c2]
+    toJSON (Or c1 c2) = object ["type" .= ("Or" :: String), "left" .= c1, "right" .= c2]
+    toJSON (Not c) = object ["type" .= ("Not" :: String), "condition" .= c]
 
 -- utils:
 
+lexeme :: Parser a -> Parser a
+lexeme p = spaces *> p <* spaces
+
 identifier :: Parser String
-identifier = many1 (letter <|> digit <|> char '_')
+identifier = lexeme (many1 (letter <|> digit <|> char '_'))
 
 parseValue :: Parser SQLValue
-parseValue = try parseString
+parseValue = lexeme (try parseString
          <|> try parseFloat
          <|> try parseInt
-         <|> try parseDate
+         <|> try parseDate)
 
 parseString :: Parser SQLValue
-parseString = do
+parseString = lexeme $ do
     char '\''
     str <- manyTill anyChar (char '\'')
     return $ SQLString str
 
 parseInt :: Parser SQLValue
-parseInt = SQLInt . read <$> many1 digit
+parseInt = lexeme (SQLInt . read <$> many1 digit)
 
 parseFloat :: Parser SQLValue
-parseFloat = do
+parseFloat = lexeme $ do
     num <- many1 digit
     char '.'
     frac <- many1 digit
     return $ SQLFloat (read (num ++ "." ++ frac))
 
 parseDate :: Parser SQLValue
-parseDate = do
+parseDate = lexeme $ do
     char '\''
     year <- count 4 digit
     char '-'
@@ -82,68 +132,97 @@ parseDate = do
     return $ SQLDate (year ++ "-" ++ month ++ "-" ++ day)
 
 parseConstraint :: Parser ConstraintType
-parseConstraint = choice
+parseConstraint = lexeme $ choice
     [ try (string "PRIMARY KEY" $> PrimaryKey)
     , try (string "FOREIGN KEY" $> ForeignKey)
     , try (string "NOT NULL" $> NotNull)
     ]
 
 parseDataType :: Parser DataType
-parseDataType = choice
-    [ try (string "INT" $> Int)
-    , try (string "FLOAT" $> Float)
-    , try (string "VARCHAR" $> VarChar)
-    , try (string "DATE" $> Date)
+parseDataType = lexeme $ choice
+    [ try (string "INT" $> IntType)
+    , try (string "FLOAT" $> FloatType)
+    , try (string "VARCHAR" $> VarCharType)
+    , try (string "DATE" $> DateType)
     ]
 
 parseColumn :: Parser (String, DataType, Maybe ConstraintType)
-parseColumn = do
+parseColumn = lexeme $ do
     colName <- identifier
-    spaces
     colType <- parseDataType
-    spaces
-    colConstraint <- optionMaybe (try (spaces *> parseConstraint))
+    colConstraint <- optionMaybe parseConstraint
     return (colName, colType, colConstraint)
 
 parseAssignment :: Parser (String, String)
-parseAssignment = do
+parseAssignment = lexeme $ do
     colName <- identifier
-    spaces
-    void $ char '='
-    spaces
+    void $ lexeme (char '=')
     value <- parseValue
     return (colName, show value)
+
+parseCondition :: Parser Condition
+parseCondition = lexeme parseOr
+
+parseOr :: Parser Condition
+parseOr = lexeme $ do
+    left <- parseAnd
+    rest <- optionMaybe (lexeme (string "OR") *> parseOr)
+    return $ maybe left (Or left) rest
+
+parseAnd :: Parser Condition
+parseAnd = lexeme $ do
+    left <- parseNot
+    rest <- optionMaybe (lexeme (string "AND") *> parseAnd)
+    return $ maybe left (And left) rest
+
+parseNot :: Parser Condition
+parseNot = lexeme $
+    (lexeme (string "NOT") *> (Not <$> parseNot)) <|> parseBaseCondition
+
+parseBaseCondition :: Parser Condition
+parseBaseCondition = lexeme (parseParens <|> parseComparison)
+
+parseParens :: Parser Condition
+parseParens = lexeme $ between (lexeme (char '(')) (lexeme (char ')')) parseCondition
+
+parseComparison :: Parser Condition
+parseComparison = lexeme $ do
+    col <- identifier
+    op <- lexeme $ choice $ map string [">=", "<=", ">", "<", "="]
+    val <- parseValue
+    return $ case op of
+        "="  -> Equals col (show val)
+        ">"  -> GreaterThan col (show val)
+        "<"  -> LessThan col (show val)
+        ">=" -> Or (GreaterThan col (show val)) (Equals col (show val))
+        "<=" -> Or (LessThan col (show val)) (Equals col (show val))
+        _    -> error "Unexpected comparison operator"
 
 -- parse statements:
 
 parseSelect :: Parser SQLStatement
-parseSelect = do
-    void $ string "SELECT "
-    cols <- try (string "*" $> ["*"]) <|> sepBy identifier (string ", ")
-    void $ string " FROM "
+parseSelect = lexeme $ do
+    void $ lexeme (string "SELECT")
+    cols <- try (lexeme (string "*") $> ["*"]) <|> sepBy identifier (lexeme (char ','))
+    void $ lexeme (string "FROM")
     table <- identifier
     cond <- optionMaybe parseWhere
     return $ SelectStmt cols table cond
 
 parseCreate :: Parser SQLStatement
-parseCreate = do
-    void $ string "CREATE TABLE "
+parseCreate = lexeme $ do
+    void $ string "CREATE TABLE"
     table <- identifier
-    spaces
-    cols <- between (char '(' *> spaces) (spaces *> char ')') (sepBy parseColumn (spaces *> char ',' *> spaces))
+    cols <- between (lexeme (char '(')) (lexeme (char ')')) (sepBy parseColumn (lexeme (char ',')))
     return $ CreateStmt table cols
 
 parseInsert :: Parser SQLStatement
-parseInsert = do
-    void $ string "INSERT INTO "
-    spaces
+parseInsert = lexeme $ do
+    void $ string "INSERT INTO"
     table <- identifier
-    spaces
-    cols <- optionMaybe $ try (between (char '(' *> spaces) (spaces *> char ')') (sepBy identifier (spaces *> char ',' *> spaces)))
-    spaces
+    cols <- optionMaybe $ try (between (lexeme (char '(')) (lexeme (char ')')) (sepBy identifier (lexeme (char ','))))
     void $ string "VALUES"
-    spaces
-    values <- between (char '(' *> spaces) (spaces *> char ')') (sepBy parseValue (spaces *> char ',' *> spaces))
+    values <- between (lexeme (char '(')) (lexeme (char ')')) (sepBy parseValue (lexeme (char ',')))
 
     case cols of
         Just colList | length colList /= length values ->
@@ -151,31 +230,28 @@ parseInsert = do
         _ -> return $ InsertStmt table cols (map show values)
 
 parseUpdate :: Parser SQLStatement
-parseUpdate = do
-    void $ string "UPDATE "
+parseUpdate = lexeme $ do
+    void $ string "UPDATE"
     table <- identifier
-    spaces
     void $ string "SET"
-    spaces
-    updates <- sepBy parseAssignment (spaces *> char ',' *> spaces)
+    updates <- sepBy parseAssignment (lexeme (char ','))
     cond <- optionMaybe parseWhere
     return $ UpdateStmt table updates cond
 
 parseDrop :: Parser SQLStatement
-parseDrop = do
-    void $ string "DROP TABLE "
+parseDrop = lexeme $ do
+    void $ string "DROP TABLE"
     DropStmt <$> identifier
 
 parseWhere :: Parser Condition
-parseWhere = do
-    void $ string " WHERE "
-    Equals <$> identifier <*> (string " = " *> identifier)
+parseWhere = lexeme $ do
+    void $ string "WHERE"
+    parseCondition
 
 parseSQL :: Parser SQLStatement
-parseSQL = do
+parseSQL = lexeme $ do
     stmt <- try parseSelect <|> try parseCreate <|> try parseInsert <|> try parseUpdate <|> parseDrop
-    spaces
-    _ <- char ';'
+    _ <- lexeme (char ';')
     return stmt
 
 -- main:

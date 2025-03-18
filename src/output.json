@@ -1,1 +1,6 @@
-{ "contents": [["*"], "tabel", null], "tag": "SelectStmt" }
+{
+  "columns": ["*"],
+  "condition": null,
+  "statement": "SelectStmt",
+  "table": "table"
+}
