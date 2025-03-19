@@ -15,10 +15,11 @@ typedef struct RowNode{
     uint8_t is_leaf;
     uint16_t num_keys;
     uint64_t page_num;
-    uint64_t keys[169];   
-    uint64_t raw_data[169]; 
+    uint64_t keys[169];
+    uint64_t raw_data[169];
     uint64_t link[170];
     struct RowNode *plink[170];    //21 liberi
+    
 
 }RowNode;
 

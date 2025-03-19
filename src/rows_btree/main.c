@@ -5,8 +5,7 @@
 #include "row_btree_op.h"
 #include "queue.h"
 
-
-
+DBFile* db;
 
 void cli_interactions(){
     bool exit = false;
@@ -18,6 +17,7 @@ void cli_interactions(){
         printf("4. Print the tree\n");
         printf("5. Commit changes\n");
         printf("6. Exit\n");
+        printf("7. Load database\n");
 
         int choice;
         scanf("%d", &choice);
@@ -26,14 +26,20 @@ void cli_interactions(){
             case 1:
                 int val;
                 printf("Enter a value to insert: ");
-                scanf("%d", &val);
-                insert(val);
+                // scanf("%d", &val);
+                // insert(val);
+                for(int i=0;i<250;i++)
+                {
+                    insert(i);
+                }
+                set_file_dirty(db,true);
                 break;
                 case 2:
                 printf("Enter a value to delete: ");
                 int del;
                 scanf("%d", &del);
                 delete_value_from_tree(del);
+                set_file_dirty(db,true);
                 break;
             case 3:
                 printf("Enter a value to search: ");
@@ -43,18 +49,28 @@ void cli_interactions(){
                 search(search_val, &pos, root);
                 break;
             case 4:
+            printf("1\n");
                 printf("Root nums  %ld, %ld, %ld\n", root->keys[1],root->keys[2],root->keys[3]);
-
+            printf("2\n");
                 traversal(root);
                 printf("\n");
                 RowNode *temp = root;
                 break;
             case 5:
-
+                commit_changes(db);
                 break;
             case 6:
                 exit = true;
                 break;
+            case 7: 
+                // load_btree_from_disk(db);
+                root = load_btree_from_disk(db);
+                printf("%ld\n",root->page_num);
+                if (root) {
+                    printf("B-Tree successfully loaded!\n");
+                } else {
+                    printf("Failed to load B-Tree.\n");
+                }
             default:
                 printf("Invalid choice\n");
         }
@@ -63,7 +79,7 @@ void cli_interactions(){
 
 int main(){
 
-    DBFile* db;
+    
 
     if(!(db = malloc(sizeof(DBFile)))){
         perror("Memory allocation failed");
@@ -91,11 +107,11 @@ int main(){
 
     free_page_queue = create_queue();
   
-    for(int i=1;i<=10;i+=1){
+    for(int i=1;i<=100000;i+=1){
         push(free_page_queue,i);
     }
 
-
+    
 
 
 

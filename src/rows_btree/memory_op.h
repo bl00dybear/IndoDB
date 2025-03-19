@@ -25,7 +25,6 @@ void get_file_size(DBFile* db){
         perror("Error getting file size");
         exit(EXIT_FAILURE);
     }
-    // printf("File size %ld\n",st.st_size);
     db->size = st.st_size;
 }
 
@@ -50,7 +49,6 @@ void init_create_memory_block(DBFile* db){
         exit(EXIT_FAILURE);
     }
     db->size = INITIAL_DB_SIZE;
-
 }
 
 void create_memory_block(DBFile* db) {
@@ -68,7 +66,6 @@ void create_memory_block(DBFile* db) {
         exit(EXIT_FAILURE);
     }
 
-    // db->data = new_data;
     db->size = new_size;
 }
 
@@ -80,8 +77,8 @@ void write_on_memory_block(DBFile *db, void* new_data){
         block_index = (db->size/PAGE_SIZE) - 1;
     }
     else{
-        //implement queue tp store free blocks
-    }  
+        //implement queue to store free blocks
+    }
     printf("Block index %d\n",block_index);
 
     void* page = (char*)db->data + (block_index * PAGE_SIZE);
@@ -89,6 +86,21 @@ void write_on_memory_block(DBFile *db, void* new_data){
     printf("%p\n",page);
     memcpy(page, new_data, PAGE_SIZE);
     db->dirty = 1;
+}
+
+void commit_changes(DBFile *db) {
+    if (!db->dirty) {
+        printf("No changes to commit.\n");
+        return;
+    }
+    serialize_btree(db,root);
+    if (msync(db->data, db->size, MS_SYNC) == -1) {
+        perror("Error committing changes to disk");
+        exit(EXIT_FAILURE);
+    }
+
+    set_file_dirty(db, false);
+    printf("Changes successfully committed to disk.\n");
 }
 
 #endif /* DA9FE760_8A8C_4090_BD62_6DAF91BCFDBA */

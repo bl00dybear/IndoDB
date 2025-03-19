@@ -29,7 +29,7 @@ void push(Queue* queue, int value) {
         queue->rear->next = new_queue_node;
         queue->rear = new_queue_node;
     }
-    printf("Elementul %d a fost adăugat în coadă.\n", value);
+    
 }
 
 // Elimină un element din coadă (dequeue)
