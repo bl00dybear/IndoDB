@@ -30,6 +30,7 @@
 *.so
 *.so.*
 *.dylib
+*.hi
 
 # Executables
 *.exe
