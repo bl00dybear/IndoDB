@@ -1,3 +1,6 @@
+# Environment
+*.vscode
+
 # Prerequisites
 *.d
 
@@ -50,3 +53,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Haskell IDE Engine Configuration
+.hie.yaml
+
+# Cabal build artifacts
+dist-newstyle/
