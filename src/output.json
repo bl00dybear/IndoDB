@@ -1,6 +1,6 @@
 {
-  "columns": ["*"],
-  "condition": null,
-  "statement": "SelectStmt",
-  "table": "table"
+  "columns": null,
+  "statement": "InsertStmt",
+  "table": "myTable",
+  "values": ["SQLInt 1", "SQLString \"myName\"", "SQLString \"24-12-2025\""]
 }
