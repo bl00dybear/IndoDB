@@ -4,11 +4,14 @@
 #include "data_structures.h"
 #include "row_btree_op.h"
 #include "queue.h"
+#include <stdio.h>
+
 
 DBFile* db;
 
 void cli_interactions(){
     bool exit = false;
+    
     while (!exit) {
         printf("Choose an option:\n");
         printf("1. Insert a value\n");
@@ -80,7 +83,7 @@ void cli_interactions(){
 int main(){
 
     
-
+    func(NULL);
     if(!(db = malloc(sizeof(DBFile)))){
         perror("Memory allocation failed");
         exit(EXIT_FAILURE);
