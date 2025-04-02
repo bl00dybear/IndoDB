@@ -17,7 +17,7 @@ data SQLValue
     | SQLFloat Float
     | SQLDate String
     deriving (Show, Generic)
-
+---------------------------------------------------------------------------------------------------testez ceva daca dau inapoi o sa dau doar pana aici
 instance ToJSON SQLValue where
     toJSON (SQLString s) = object ["valueType" .= ("String" :: String), "value" .= s]
     toJSON (SQLInt i) = object ["valueType" .= ("Int" :: String), "value" .= i]
@@ -39,9 +39,12 @@ instance ToJSON DataType where
 data SQLStatement
     = SelectStmt [String] String (Maybe Condition)
     | CreateStmt String [(String, DataType, Maybe ConstraintType)]
-    | InsertStmt String (Maybe [String]) [String]
+    | InsertStmt String (Maybe [String]) [SQLValue]
     | UpdateStmt String [(String, String)] (Maybe Condition)
     | DropStmt String
+    | CreateDbStmt String
+    | DropDbStmt String
+    | DeleteStmt String (Maybe Condition)
     deriving (Show, Generic)
 
 instance ToJSON SQLStatement where
@@ -72,6 +75,20 @@ instance ToJSON SQLStatement where
         [ "statement" .= ("DropStmt" :: String)
         , "table" .= table
         ]
+    toJSON (CreateDbStmt name) = object
+        [  "statement" .=("CreateDbStmt" :: String)
+        ,  "database" .= name
+        ]
+    toJSON (DropDbStmt name) = object
+        [  "statement" .=("DropDbStmt" :: String)
+        ,  "database" .= name
+        ]
+    toJSON (DeleteStmt table cond) = object
+        [ "statement" .= ("DeleteStmt" :: String)
+        , "table" .= table
+        , "condition" .= cond
+        ]
+
 
 data Condition
     = Equals String String
@@ -99,10 +116,10 @@ identifier :: Parser String
 identifier = lexeme (many1 (letter <|> digit <|> char '_'))
 
 parseValue :: Parser SQLValue
-parseValue = lexeme (try parseString
+parseValue = lexeme (try parseDate
          <|> try parseFloat
          <|> try parseInt
-         <|> try parseDate)
+         <|> try parseString)
 
 parseString :: Parser SQLValue
 parseString = lexeme $ do
@@ -123,13 +140,13 @@ parseFloat = lexeme $ do
 parseDate :: Parser SQLValue
 parseDate = lexeme $ do
     char '\''
-    year <- count 4 digit
+    day <- count 2 digit
     char '-'
     month <- count 2 digit
     char '-'
-    day <- count 2 digit
+    year <- count 4 digit
     char '\''
-    return $ SQLDate (year ++ "-" ++ month ++ "-" ++ day)
+    return $ SQLDate (day ++ "-" ++ month ++ "-" ++ year)
 
 parseConstraint :: Parser ConstraintType
 parseConstraint = lexeme $ choice
@@ -227,7 +244,7 @@ parseInsert = lexeme $ do
     case cols of
         Just colList | length colList /= length values ->
             fail "Syntax error: Number of columns does not match number of values."
-        _ -> return $ InsertStmt table cols (map show values)
+        _ -> return $ InsertStmt table cols  values
 
 parseUpdate :: Parser SQLStatement
 parseUpdate = lexeme $ do
@@ -243,6 +260,26 @@ parseDrop = lexeme $ do
     void $ string "DROP TABLE"
     DropStmt <$> identifier
 
+parseCreateDb :: Parser SQLStatement
+parseCreateDb = lexeme $ do
+    void $ string "CREATE DATABASE"
+    name <- identifier
+    return $ CreateDbStmt name
+
+parseDropDb :: Parser SQLStatement
+parseDropDb = lexeme $ do
+    void $ string "DROP DATABASE"
+    name <- identifier
+    return $ DropDbStmt name
+
+parseDelete :: Parser SQLStatement
+parseDelete = lexeme $ do
+    void $ lexeme (string "DELETE FROM")
+    table <- identifier
+    cond <- optionMaybe parseWhere
+    return $ DeleteStmt table cond
+
+
 parseWhere :: Parser Condition
 parseWhere = lexeme $ do
     void $ string "WHERE"
@@ -250,7 +287,7 @@ parseWhere = lexeme $ do
 
 parseSQL :: Parser SQLStatement
 parseSQL = lexeme $ do
-    stmt <- try parseSelect <|> try parseCreate <|> try parseInsert <|> try parseUpdate <|> parseDrop
+    stmt <- try parseSelect <|> try parseCreate <|> try parseInsert <|> try parseUpdate <|> try parseDrop <|> try parseCreateDb <|> try parseDropDb <|> parseDelete
     _ <- lexeme (char ';')
     return stmt
 
@@ -266,3 +303,14 @@ main = do
         Right ast -> do
             let jsonOutput = encode ast
             B.writeFile "./src/output.json" jsonOutput
+
+
+
+{-
+ Cristi esti frtl meu da smr eu ai cate un comentariu
+ la suta de linii de cod pe bune macar la misto puteai
+ sa mai pui ca pana la finalul semestrului nici tu nu
+ stii ce ai facut aici
+-}
+
+
