@@ -1,6 +1,9 @@
 {
-  "columns": null,
-  "statement": "InsertStmt",
-  "table": "myTable",
-  "values": ["SQLInt 1", "SQLString \"myName\"", "SQLString \"24-12-2025\""]
+  "condition": {
+    "left": { "column": "cond", "type": "GreaterThan", "value": "SQLInt 23" },
+    "right": { "column": "cond", "type": "Equals", "value": "SQLInt 23" },
+    "type": "Or"
+  },
+  "statement": "DeleteStmt",
+  "table": "my_table"
 }

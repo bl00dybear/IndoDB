@@ -10,14 +10,13 @@ import Control.Monad (void)
 import Data.Functor (($>))
 
 -- data definition:
-
 data SQLValue
     = SQLString String
     | SQLInt Int
     | SQLFloat Float
     | SQLDate String
     deriving (Show, Generic)
----------------------------------------------------------------------------------------------------testez ceva daca dau inapoi o sa dau doar pana aici
+
 instance ToJSON SQLValue where
     toJSON (SQLString s) = object ["valueType" .= ("String" :: String), "value" .= s]
     toJSON (SQLInt i) = object ["valueType" .= ("Int" :: String), "value" .= i]
@@ -88,7 +87,6 @@ instance ToJSON SQLStatement where
         , "table" .= table
         , "condition" .= cond
         ]
-
 
 data Condition
     = Equals String String
@@ -278,7 +276,6 @@ parseDelete = lexeme $ do
     table <- identifier
     cond <- optionMaybe parseWhere
     return $ DeleteStmt table cond
-
 
 parseWhere :: Parser Condition
 parseWhere = lexeme $ do
