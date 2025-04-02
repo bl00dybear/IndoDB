@@ -10,7 +10,6 @@ import Control.Monad (void)
 import Data.Functor (($>))
 
 -- data definition:
-
 data SQLValue
     = SQLString String
     | SQLInt Int
@@ -88,7 +87,6 @@ instance ToJSON SQLStatement where
         , "table" .= table
         , "condition" .= cond
         ]
-
 
 data Condition
     = Equals String String
@@ -284,7 +282,6 @@ parseDelete = lexeme $ do
     table <- identifier
     cond <- optionMaybe parseWhere
     return $ DeleteStmt table cond
-
 
 parseWhere :: Parser Condition
 parseWhere = lexeme $ do
