@@ -17,7 +17,7 @@ data SQLValue
     | SQLFloat Float
     | SQLDate String
     deriving (Show, Generic)
----------------------------------------------------------------------------------------------------testez ceva daca dau inapoi o sa dau doar pana aici
+
 instance ToJSON SQLValue where
     toJSON (SQLString s) = object ["valueType" .= ("String" :: String), "value" .= s]
     toJSON (SQLInt i) = object ["valueType" .= ("Int" :: String), "value" .= i]
@@ -228,17 +228,19 @@ parseSelect = lexeme $ do
 
 parseCreate :: Parser SQLStatement
 parseCreate = lexeme $ do
-    void $ string "CREATE TABLE"
+    void $ lexeme (string "CREATE")
+    void $ lexeme (string "TABLE")
     table <- identifier
     cols <- between (lexeme (char '(')) (lexeme (char ')')) (sepBy parseColumn (lexeme (char ',')))
     return $ CreateStmt table cols
 
 parseInsert :: Parser SQLStatement
 parseInsert = lexeme $ do
-    void $ string "INSERT INTO"
+    void $ lexeme (string "INSERT")
+    void $ lexeme (string "INTO")
     table <- identifier
     cols <- optionMaybe $ try (between (lexeme (char '(')) (lexeme (char ')')) (sepBy identifier (lexeme (char ','))))
-    void $ string "VALUES"
+    void $ lexem (string "VALUES")
     values <- between (lexeme (char '(')) (lexeme (char ')')) (sepBy parseValue (lexeme (char ',')))
 
     case cols of
@@ -248,33 +250,37 @@ parseInsert = lexeme $ do
 
 parseUpdate :: Parser SQLStatement
 parseUpdate = lexeme $ do
-    void $ string "UPDATE"
+    void $ lexeme (string "UPDATE")
     table <- identifier
-    void $ string "SET"
+    void $ lexeme (string "SET")
     updates <- sepBy parseAssignment (lexeme (char ','))
     cond <- optionMaybe parseWhere
     return $ UpdateStmt table updates cond
 
 parseDrop :: Parser SQLStatement
 parseDrop = lexeme $ do
-    void $ string "DROP TABLE"
+    void $ lexeme (string "DROP")
+    void $ lexeme (string "TABLE")
     DropStmt <$> identifier
 
 parseCreateDb :: Parser SQLStatement
 parseCreateDb = lexeme $ do
-    void $ string "CREATE DATABASE"
+    void $ lexeme (string "CREATE")
+    void $ lexeme (string "DATABASE")
     name <- identifier
     return $ CreateDbStmt name
 
 parseDropDb :: Parser SQLStatement
 parseDropDb = lexeme $ do
-    void $ string "DROP DATABASE"
+    void $ lexeme (string "DROP")
+    void $ lexeme (string "DATABASE")
     name <- identifier
     return $ DropDbStmt name
 
 parseDelete :: Parser SQLStatement
 parseDelete = lexeme $ do
-    void $ lexeme (string "DELETE FROM")
+    void $ lexeme (string "DELETE")
+    void $ lexeme (string "FROM")
     table <- identifier
     cond <- optionMaybe parseWhere
     return $ DeleteStmt table cond
