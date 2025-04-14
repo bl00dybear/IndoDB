@@ -238,7 +238,7 @@ parseInsert = lexeme $ do
     void $ lexeme (string "INTO")
     table <- identifier
     cols <- optionMaybe $ try (between (lexeme (char '(')) (lexeme (char ')')) (sepBy identifier (lexeme (char ','))))
-    void $ lexem (string "VALUES")
+    void $ lexeme (string "VALUES")
     values <- between (lexeme (char '(')) (lexeme (char ')')) (sepBy parseValue (lexeme (char ',')))
 
     case cols of
@@ -295,7 +295,6 @@ parseSQL = lexeme $ do
     return stmt
 
 -- main:
-
 main :: IO ()
 main = do
     input <- getLine

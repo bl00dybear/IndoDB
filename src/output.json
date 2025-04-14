@@ -1,9 +1,8 @@
 {
-  "condition": {
-    "left": { "column": "cond", "type": "GreaterThan", "value": "SQLInt 23" },
-    "right": { "column": "cond", "type": "Equals", "value": "SQLInt 23" },
-    "type": "Or"
-  },
-  "statement": "DeleteStmt",
+  "columns": [
+    { "constraint": "PrimaryKey", "name": "val1", "type": "Int" },
+    { "constraint": "NotNull", "name": "val2", "type": "Int" }
+  ],
+  "statement": "CreateStmt",
   "table": "my_table"
 }
