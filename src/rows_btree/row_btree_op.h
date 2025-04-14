@@ -50,6 +50,7 @@ struct RowNode *create_node(const int val, struct RowNode *child) {
     
     return newNode;
 }
+void write_on_memory_block(DBFile *db, void* new_data);
 
 // Function to insert a value into a node at the given position
 void insert_node(const int val, const int pos, struct RowNode *node, struct RowNode *child) {
@@ -234,7 +235,7 @@ void traversal(const struct RowNode *myNode) {
     
     int i;
     for (i = 0; i < myNode->num_keys; i++) {
-        printf("  Key[%d] = %d\n", i+1, myNode->keys[i+1]);
+        printf("  Key[%d] = %ld\n", i+1, myNode->keys[i+1]);
     }
     
     // For debugging plink pointers after deserialization

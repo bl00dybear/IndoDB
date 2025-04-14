@@ -1,8 +1,8 @@
 #include "libraries.h"
 #include "config.h"
+#include "row_btree_op.h"
 #include "memory_op.h"
 #include "data_structures.h"
-#include "row_btree_op.h"
 #include "queue.h"
 #include <stdio.h>
 
@@ -82,8 +82,6 @@ void cli_interactions(){
 
 int main(){
 
-    
-    func(NULL);
     if(!(db = malloc(sizeof(DBFile)))){
         perror("Memory allocation failed");
         exit(EXIT_FAILURE);
@@ -114,11 +112,7 @@ int main(){
         push(free_page_queue,i);
     }
 
-    
-
-
-
-    cli_interactions(db);
+    cli_interactions();
 
     free(db);
     
