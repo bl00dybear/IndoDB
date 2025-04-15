@@ -69,7 +69,7 @@ void create_memory_block(DBFile* db) {
     db->size = new_size;
 }
 
-void write_on_memory_block(DBFile *db, void* new_data){
+void write_on_memory_block(DBFile *db, void* new_data,u_int64_t page_num){
     int block_index;
     printf("%d\n",db->free_blocks);
     if(!db->free_blocks){
@@ -79,9 +79,9 @@ void write_on_memory_block(DBFile *db, void* new_data){
     else{
         //implement queue to store free blocks
     }
-    printf("Block index %d\n",block_index);
+    printf("Block index %ld\n",page_num);
 
-    void* page = (char*)db->data + (block_index * PAGE_SIZE);
+    void* page = (char*)db->data + (page_num * PAGE_SIZE);
 
     printf("%p\n",page);
     memcpy(page, new_data, PAGE_SIZE);

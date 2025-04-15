@@ -50,7 +50,7 @@ struct RowNode *create_node(const int val, struct RowNode *child) {
     
     return newNode;
 }
-void write_on_memory_block(DBFile *db, void* new_data);
+void write_on_memory_block(DBFile *db, void* new_data, u_int64_t page_num);
 
 // Function to insert a value into a node at the given position
 void insert_node(const int val, const int pos, struct RowNode *node, struct RowNode *child) {
@@ -360,7 +360,7 @@ void serialize_node(DBFile* db, RowNode* node) {
     memcpy(buffer + offset, node->link, sizeof(node->link));
 
     // Write to disk
-    write_on_memory_block(db, buffer);
+    write_on_memory_block(db, buffer, node->page_num);
     free(buffer);
     
     // Serialize child nodes
