@@ -1,9 +1,9 @@
-#include "libraries.h"
-#include "config.h"
-#include "row_btree_op.h"
-#include "memory_op.h"
-#include "data_structures.h"
-#include "queue.h"
+#include "headers/libraries.h"
+#include "headers/config.h"
+#include "headers/row_btree_op.h"
+#include "headers/memory_op.h"
+#include "headers/data_structures.h"
+#include "headers/queue.h"
 #include <stdio.h>
 
 
@@ -19,8 +19,8 @@ void cli_interactions(){
         printf("3. Search for a value\n");
         printf("4. Print the tree\n");
         printf("5. Commit changes\n");
-        printf("6. Exit\n");
-        printf("7. Load database\n");
+        printf("6. Load database\n");
+        printf("7. Exit\n");
 
         int choice;
         scanf("%d", &choice);
@@ -52,9 +52,9 @@ void cli_interactions(){
                 search(search_val, &pos, root);
                 break;
             case 4:
-            printf("1\n");
+                printf("1\n");
                 printf("Root nums  %ld, %ld, %ld\n", root->keys[1],root->keys[2],root->keys[3]);
-            printf("2\n");
+                printf("2\n");
                 traversal(root);
                 printf("\n");
                 RowNode *temp = root;
@@ -63,10 +63,6 @@ void cli_interactions(){
                 commit_changes(db);
                 break;
             case 6:
-                exit = true;
-                break;
-            case 7: 
-                // load_btree_from_disk(db);
                 root = load_btree_from_disk(db);
                 printf("%ld\n",root->page_num);
                 if (root) {
@@ -74,6 +70,10 @@ void cli_interactions(){
                 } else {
                     printf("Failed to load B-Tree.\n");
                 }
+            case 7:
+                exit = true;
+                break;
+
             default:
                 printf("Invalid choice\n");
         }
@@ -92,7 +92,6 @@ int main(){
 
     open_database_file(&db->fd);
     get_file_size(db);
-    // printf("File size %ld\n",db->size);
 
     if(!db->size)
         init_create_memory_block(db);
