@@ -70,6 +70,7 @@ void cli_interactions(){
                 } else {
                     printf("Failed to load B-Tree.\n");
                 }
+                break;
             case 7:
                 exit = true;
                 break;

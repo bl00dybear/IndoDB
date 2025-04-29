@@ -5,6 +5,6 @@
 #define INITIAL_DB_SIZE PAGE_SIZE 
 #define ROW_MAX_KEYS 169
 #define ROW_MIN_KEYS 86
-#define DB_FILENAME "/home/sebi/IndoDB/database.bin"
+#define DB_FILENAME "../database.bin"
 
 #endif
