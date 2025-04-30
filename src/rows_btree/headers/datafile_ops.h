@@ -3,6 +3,6 @@
 
 #include "data_structures.h"
 
-void* write_row(DataFile* df, void *row, size_t row_size);
+void* write_row(DataFile* df, const void *row, size_t row_size);
 
 #endif
