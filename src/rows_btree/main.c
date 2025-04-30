@@ -1,13 +1,14 @@
 #include "headers/libraries.h"
 #include "headers/config.h"
-#include "headers/row_btree_op.h"
-#include "headers/memory_op.h"
+#include "headers/row_btree_ops.h"
+#include "headers/memory_ops.h"
 #include "headers/data_structures.h"
 #include "headers/queue.h"
 #include <stdio.h>
 
 
 DBFile* db;
+DBFile* df;
 
 void cli_interactions(){
     bool exit = false;
@@ -27,7 +28,7 @@ void cli_interactions(){
 
         switch (choice) {
             case 1:
-                int val;
+                // int val;
                 printf("Enter a value to insert: ");
                 // scanf("%d", &val);
                 // insert(val);
@@ -57,7 +58,7 @@ void cli_interactions(){
                 printf("2\n");
                 traversal(root);
                 printf("\n");
-                RowNode *temp = root;
+                // RowNode *temp = root;
                 break;
             case 5:
                 commit_changes(db);
@@ -83,23 +84,38 @@ void cli_interactions(){
 
 int main(){
 
-    if(!(db = malloc(sizeof(DBFile)))){
+    if(!((db = malloc(sizeof(DBFile))))){
+        perror("Memory allocation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if(!((df = malloc(sizeof(DataFile))))){
         perror("Memory allocation failed");
         exit(EXIT_FAILURE);
     }
 
     if(!(~access(DB_FILENAME, F_OK)))
-        create_database_file(&db->fd);
+        create_database_file(DB_FILENAME);
 
-    open_database_file(&db->fd);
-    get_file_size(db);
+    if(!(~access(DATA_FILENAME, F_OK)))
+        create_database_file(DATA_FILENAME);
+
+    open_database_file(&db->fd,DB_FILENAME);
+    open_database_file(&df->fd,DATA_FILENAME);
+
+    get_db_file_size(db);
+    get_df_file_size(df);
 
     if(!db->size)
-        init_create_memory_block(db);
+        init_create_db_memory_block(db);
+
+    if(!df->size)
+        init_create_df_memory_block(df);
 
     printf("File size %ld\n",db->size);
 
-    memory_map_file(db);
+    memory_map_db_file(db);
+    memory_map_df_file(df);
 
     set_file_dirty(db, false);
     set_new_file_free_blocks(db);

@@ -1,23 +1,23 @@
-#include "../headers/memory_op.h"
+#include "../headers/memory_ops.h"
 #include "../headers/libraries.h"
 #include "../headers/config.h"
 #include "../headers/data_structures.h"
 
-void create_database_file(){
-    if (!(~creat(DB_FILENAME, 0644))) {
+void create_database_file(char file_name[]){
+    if (!(~creat(file_name, 0644))) {
         perror("Error creating database file");
         exit(EXIT_FAILURE);
     }
 }
 
-void open_database_file(int* db_filedescriptor){
-    if (!(~((*db_filedescriptor) = open(DB_FILENAME, O_RDWR | O_CREAT, 0644)))) {
+void open_database_file(int* db_filedescriptor, char file_name[]){
+    if (!(~((*db_filedescriptor) = open(file_name, O_RDWR | O_CREAT, 0644)))) {
         perror("Error opening database file");
         exit(EXIT_FAILURE);
     }
 }
 
-void get_file_size(DBFile* db){
+void get_db_file_size(DBFile* db){
     struct stat st;
     if (!(~fstat(db->fd, &st))) {
         perror("Error getting file size");
@@ -26,9 +26,26 @@ void get_file_size(DBFile* db){
     db->size = st.st_size;
 }
 
-void memory_map_file(DBFile* db){
+void get_df_file_size(DataFile* df){
+    struct stat st;
+    if (!(~fstat(df->fd, &st))) {
+        perror("Error getting file size");
+        exit(EXIT_FAILURE);
+    }
+    df->size = st.st_size;
+}
+
+void memory_map_db_file(DBFile* db){
     db->data = mmap(NULL, db->size, PROT_READ | PROT_WRITE, MAP_SHARED, db->fd, 0);
     if (db->data == MAP_FAILED) {
+        perror("Error mapping database file");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void memory_map_df_file(DataFile* df){
+    df->write_ptr = mmap(NULL, df->size, PROT_READ | PROT_WRITE, MAP_SHARED, df->fd, 0);
+    if (df->write_ptr == MAP_FAILED) {
         perror("Error mapping database file");
         exit(EXIT_FAILURE);
     }
@@ -42,12 +59,20 @@ void set_new_file_free_blocks(DBFile* db){
     db->free_blocks = 0;
 }
 
-void init_create_memory_block(DBFile* db){
+void init_create_db_memory_block(DBFile* db){
     if (!(~ftruncate(db->fd, INITIAL_DB_SIZE))) {
         perror("Error creating memory block");
         exit(EXIT_FAILURE);
     }
     db->size = INITIAL_DB_SIZE;
+}
+
+void init_create_df_memory_block(DataFile* df){
+    if (!(~ftruncate(df->fd, INITIAL_DB_SIZE))) {
+        perror("Error creating memory block");
+        exit(EXIT_FAILURE);
+    }
+    df->size = INITIAL_DB_SIZE;
 }
 
 void create_memory_block(DBFile* db) {

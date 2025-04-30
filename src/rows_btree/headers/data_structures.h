@@ -37,7 +37,7 @@ typedef struct {
 
 extern Queue* free_page_queue;
 
-#define MAX_NODES 1000
+#define MAX_NODES 10000
 typedef struct {
     uint64_t page_num;
     RowNode* node;
@@ -48,5 +48,12 @@ extern int visited_count;
 
 extern uint64_t serialized_pages[MAX_NODES];
 extern int serialized_count;
+
+typedef struct DataFile {
+    int fd;
+    ssize_t size;
+    void *write_ptr;
+    bool dirty;
+}DataFile;
 
 #endif
