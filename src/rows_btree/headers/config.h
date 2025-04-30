@@ -8,4 +8,6 @@
 #define DB_FILENAME "../database/btrees.bin"
 #define DATA_FILENAME "../database/data.bin"
 
+#define MAX_NODES 100000
+
 #endif

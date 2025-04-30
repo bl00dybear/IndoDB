@@ -4,11 +4,13 @@
 #include "headers/memory_ops.h"
 #include "headers/data_structures.h"
 #include "headers/queue.h"
+#include "headers/datafile_ops.h"
 #include <stdio.h>
 
 
 DBFile* db;
 DBFile* df;
+uint64_t global_id = 0;
 
 void cli_interactions(){
     bool exit = false;
@@ -28,17 +30,32 @@ void cli_interactions(){
 
         switch (choice) {
             case 1:
-                // int val;
-                printf("Enter a value to insert: ");
-                // scanf("%d", &val);
-                // insert(val);
-                for(int i=0;i<250;i++)
-                {
-                    insert(i);
+                char buffer[1024];
+
+                int c;
+                while ((c = getchar()) != '\n' && c != EOF);
+
+
+                printf("Enter text to write: ");
+                if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
+                    size_t len = strlen(buffer);
+                    if (len > 0 && buffer[len-1] == '\n') {
+                        buffer[len-1] = '\0';
+                        len--;
+                    }
+
+                    void* written_address = write_row(df, buffer, len + 1);
+                    printf("Text written at address: %p\n", written_address);
                 }
+
+                uint64_t current_id = global_id++;  // luăm ID-ul curent și îl incrementăm
+                insert(current_id);
+                printf("Inserted record with ID: %lu\n", current_id);
+
                 set_file_dirty(db,true);
                 break;
-                case 2:
+
+            case 2:
                 printf("Enter a value to delete: ");
                 int del;
                 scanf("%d", &del);

@@ -95,10 +95,9 @@ void create_memory_block(DBFile* db) {
 
 void write_on_memory_block(DBFile *db, const void* new_data, u_int64_t page_num){
     printf("%d\n", db->free_blocks);
-    if (!db->free_blocks) {
+
+    while ((page_num+1)*PAGE_SIZE>db->size) {
         create_memory_block(db);
-    } else {
-        // TODO: implement queue to store free blocks
     }
 
     printf("Block index %ld\n", page_num);

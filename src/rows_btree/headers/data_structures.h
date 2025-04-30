@@ -2,6 +2,7 @@
 #define DATA_STRUCTURES_H
 
 #include "libraries.h"
+#include "config.h"
 #include <stdio.h>   
 
 typedef struct DBFile{
@@ -17,12 +18,11 @@ typedef struct RowNode{
     uint16_t num_keys;
     uint64_t page_num;
     uint64_t keys[169];
-    uint64_t raw_data[169];
+    void* raw_data[169];            //also 8 bytes
     uint64_t link[170];
     struct RowNode *plink[170];    //21 liberi
 }RowNode;
 
-// Declară variabilele ca extern în loc să le definești aici
 extern RowNode *root;
 
 typedef struct QueueNode {
@@ -37,7 +37,7 @@ typedef struct {
 
 extern Queue* free_page_queue;
 
-#define MAX_NODES 10000
+
 typedef struct {
     uint64_t page_num;
     RowNode* node;
@@ -55,5 +55,8 @@ typedef struct DataFile {
     void *write_ptr;
     bool dirty;
 }DataFile;
+
+extern uint64_t global_id;
+
 
 #endif
