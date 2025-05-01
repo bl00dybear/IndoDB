@@ -24,7 +24,7 @@ RowNode* load_btree_from_disk(DBFile* db) ;
 int find_predecessor(const struct RowNode *node) ;
 int find_successor(const struct RowNode *node) ;
 void shift_left(struct RowNode *node, const int pos) ;
-int can_spare_key(struct RowNode *node) ;
+int can_spare_key(const struct RowNode *node) ;
 void handle_underfull_node(struct RowNode *parent, int idx) ;
 void delete_value(struct RowNode *node, const int val) ;
 void delete_value_from_tree(const int val) ;

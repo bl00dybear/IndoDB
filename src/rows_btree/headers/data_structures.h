@@ -17,10 +17,10 @@ typedef struct RowNode{
     uint8_t is_leaf;
     uint16_t num_keys;
     uint64_t page_num;
-    uint64_t keys[169];
-    void* raw_data[169];            //also 8 bytes
-    uint64_t link[170];
-    struct RowNode *plink[170];    //21 liberi
+    uint64_t keys[ROW_MAX_KEYS];
+    void* raw_data[ROW_MAX_KEYS];            //also 8 bytes
+    uint64_t link[ROW_MAX_KEYS+1];
+    struct RowNode *plink[ROW_MAX_KEYS+1];    //21 liberi
 }RowNode;
 
 extern RowNode *root;
@@ -31,8 +31,8 @@ typedef struct QueueNode {
 } QueueNode;
 
 typedef struct {
-    QueueNode* front;  // Primul element (capul cozii)
-    QueueNode* rear;   // Ultimul element (coada cozii)
+    QueueNode* front;
+    QueueNode* rear;
 } Queue;
 
 extern Queue* free_page_queue;
@@ -43,10 +43,10 @@ typedef struct {
     RowNode* node;
 } NodeEntry;
 
-extern NodeEntry visited_nodes[MAX_NODES];
+extern NodeEntry visited_nodes[MAX_VISITED_NODES];
 extern int visited_count;
 
-extern uint64_t serialized_pages[MAX_NODES];
+extern uint64_t serialized_pages[MAX_VISITED_NODES];
 extern int serialized_count;
 
 typedef struct DataFile {

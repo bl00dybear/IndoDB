@@ -3,10 +3,6 @@
 #include "../headers/queue.h"
 
 
-
-// Global variables
-
-// Function to create a new node with a given value
 struct RowNode *create_node(const int val, struct RowNode *child) {
     struct RowNode *newNode = (struct RowNode *)malloc(sizeof(struct RowNode));
     if (!newNode) {
@@ -27,7 +23,7 @@ struct RowNode *create_node(const int val, struct RowNode *child) {
     newNode->plink[0] = root;
     newNode->plink[1] = child;
     
-    // Allocate page number from free page queue
+    // Allocate page number from the free page queue
     newNode->page_num = front(free_page_queue);
     pop(free_page_queue);
     
@@ -61,7 +57,7 @@ void insert_node(const int val, const int pos, struct RowNode *node, struct RowN
         j -= 1;
     }
 
-    // Insert value at correct position
+    // Insert value at the correct position
     node->keys[j + 1] = val;
     node->plink[j + 1] = child;
     
@@ -142,19 +138,19 @@ void split_node(const int val, int *pval, const int pos, struct RowNode *node, s
 int set_value(const int val, int *pval, struct RowNode *node, struct RowNode **child) {
     int pos;
 
-    // If tree is empty or we've reached a leaf, create new node
+    // If a tree is empty, or we've reached a leaf, create a new node
     if (!node) {
         *pval = val;
         *child = NULL;
         return 1;
     }
 
-    // Finding correct position for the value in the current node
+    // Finding the correct position for the value in the current node
     if (val < node->keys[1]) {
         pos = 0;
     } else {
         for (pos = node->num_keys; (val < node->keys[pos] && pos > 1); pos--);
-        
+
         // Prevent duplicate values (optional)
         // if (val == node->keys[pos]) {
         //     printf("Duplicates are not permitted\n");
@@ -162,7 +158,7 @@ int set_value(const int val, int *pval, struct RowNode *node, struct RowNode **c
         // }
     }
 
-    // If node is a leaf, insert directly
+    // If the node is a leaf, insert directly
     if (node->is_leaf) {
         if (node->num_keys < ROW_MAX_KEYS) {
             insert_node(val, pos, node, NULL);
@@ -175,7 +171,7 @@ int set_value(const int val, int *pval, struct RowNode *node, struct RowNode **c
     } else {
         // For internal nodes, recursively insert into the correct subtree
         if (set_value(val, pval, node->plink[pos], child)) {
-            // If child was split, insert promoted value
+            // If the child was split, insert the promoted value
             if (node->num_keys < ROW_MAX_KEYS) {
                 insert_node(*pval, pos, node, *child);
                 return 0;
@@ -202,14 +198,14 @@ void search(const int val, int *pos, struct RowNode *myNode) {
     } else {
         for (*pos = myNode->num_keys; (val < myNode->keys[*pos] && *pos > 1); (*pos)--);
 
-        // If found, print message and return
+        // If found, print a message and return
         if (val == myNode->keys[*pos]) {
             printf("%d is found\n", val);
             return;
         }
     }
     
-    // If this is a leaf and we didn't find the value, it's not in the tree
+    // If this is a leaf, and we didn't find the value, it's not in the tree
     if (myNode->is_leaf) {
         printf("%d not found in the tree\n", val);
         return;
@@ -256,10 +252,7 @@ void traversal(const struct RowNode *myNode) {
 
 // Serialization functions
 
-// Array pentru a urmări nodurile vizitate
-
-
-// Funcție pentru a găsi un nod deja vizitat
+// Function to find an already visited node
 RowNode* find_visited_node(uint64_t page_num) {
     for (int i = 0; i < visited_count; i++) {
         if (visited_nodes[i].page_num == page_num) {
@@ -269,9 +262,9 @@ RowNode* find_visited_node(uint64_t page_num) {
     return NULL;
 }
 
-// Funcție pentru a adăuga un nod în lista de noduri vizitate
+// Function to add a node to the list of visited nodes
 void add_visited_node(uint64_t page_num, RowNode* node) {
-    if (visited_count < MAX_NODES) {
+    if (visited_count < MAX_VISITED_NODES) {
         visited_nodes[visited_count].page_num = page_num;
         visited_nodes[visited_count].node = node;
         visited_count++;
@@ -280,10 +273,8 @@ void add_visited_node(uint64_t page_num, RowNode* node) {
     }
 }
 
-// Variabile pentru a urmări paginile serializate
 
-
-// Funcție pentru a verifica dacă o pagină a fost deja serializată
+// Function to check if a page has already been serialized
 bool is_page_serialized(uint64_t page_num) {
     for (int i = 0; i < serialized_count; i++) {
         if (serialized_pages[i] == page_num) {
@@ -293,9 +284,9 @@ bool is_page_serialized(uint64_t page_num) {
     return false;
 }
 
-// Funcție pentru a adăuga o pagină în lista de pagini serializate
+// Function to add a page to the list of serialized pages
 void add_serialized_page(uint64_t page_num) {
-    if (serialized_count < MAX_NODES) {
+    if (serialized_count < MAX_VISITED_NODES) {
         serialized_pages[serialized_count++] = page_num;
     }
 }
@@ -360,35 +351,35 @@ void serialize_node(DBFile* db, RowNode* node) {
     }
 }
 
-// Funcție modificată pentru serializarea întregului arbore B
+// Modified function for serializing the entire B tree
 void serialize_btree(DBFile* db, RowNode* root) {
     if (!root) {
         printf("Error: Cannot serialize NULL root\n");
         return;
     }
-    
-    // Resetează array-ul de pagini serializate
+
+    // Reset the array of serialized pages
     serialized_count = 0;
 
-    // Salvează numărul paginii rădăcinii în metadata (pagina 0)
+    // Save the root page number in metadata (page 0)
     uint64_t root_page_num = root->page_num;
     memcpy(db->data, &root_page_num, sizeof(root_page_num));
     printf("Serializing root page number %lu to metadata\n", root_page_num);
 
-    // Serializează restul arborelui
+    // Serialize the rest of the tree
     serialize_node(db, root);
     
     printf("Serialization complete. Total nodes serialized: %d\n", serialized_count);
 }
 
-// Funcție de deserializare a unui nod, modificată pentru a utiliza lista de noduri vizitate
+// Node deserialization function, modified to use the list of visited nodes
 RowNode* deserialize_node(DBFile* db, uint64_t page_num) {
     // Validate page number
     if (page_num == 0 || page_num * PAGE_SIZE >= db->size) {
         return NULL;
     }
     
-    // Check if node is already loaded
+    // Check if a node is already loaded
     RowNode* existing_node = find_visited_node(page_num);
     if (existing_node != NULL) {
         return existing_node;
@@ -446,12 +437,12 @@ RowNode* deserialize_node(DBFile* db, uint64_t page_num) {
     return node;
 }
 
-// Funcție modificată pentru deserializarea întregului arbore B
+// Modified function for deserializing the entire B-tree
 RowNode* deserialize_btree(DBFile* db) {
-    // Resetează array-ul de noduri vizitate
+    // Reset the array of visited nodes
     visited_count = 0;
-    
-    // Verifică dacă fișierul este valid
+
+    // Check if the file is valid
     if (db->data == NULL || db->size < sizeof(uint64_t)) {
         printf("Error: Invalid database file\n");
         return NULL;
@@ -459,21 +450,21 @@ RowNode* deserialize_btree(DBFile* db) {
     
     uint64_t root_page_num;
 
-    // Citește root_page_num din pagina 0
+    // Read root_page_num from page 0
     memcpy(&root_page_num, db->data, sizeof(root_page_num));
     printf("Deserialized root from page %lu\n", root_page_num);
-    
-    // Verifică dacă root_page_num este valid
+
+    // Check if root_page_num is valid
     if (root_page_num == 0 || root_page_num * PAGE_SIZE >= db->size) {
         printf("Error: Invalid root page number: %lu\n", root_page_num);
         return NULL;
     }
-    
-    // Încarcă arborele
+
+    // Tree load
     return deserialize_node(db, root_page_num);
 }
 
-// Funcția principală pentru încărcarea arborelui de pe disc
+// Main function for loading the tree from disk
 RowNode* load_btree_from_disk(DBFile* db) {
     printf("Loading B-tree from disk...\n");
     RowNode* loaded_root = deserialize_btree(db);
@@ -488,18 +479,20 @@ RowNode* load_btree_from_disk(DBFile* db) {
     return loaded_root;
 }
 
-// Functions for deletion
+/*
+                            Functions for deletion
+*/
 
-// Find the in-order predecessor (largest value in left subtree)
+// Find the in-order predecessor (the largest value in the left subtree)
 int find_predecessor(const struct RowNode *node) {
     // Start at the given node
     const struct RowNode *current = node;
-    
+
     // If the node is a leaf, return its rightmost key
     if (current->is_leaf) {
         return current->keys[current->num_keys];
     }
-    
+
     // Otherwise, find the rightmost leaf node in the subtree
     while (!current->is_leaf) {
         current = current->plink[current->num_keys];
@@ -508,7 +501,7 @@ int find_predecessor(const struct RowNode *node) {
     return current->keys[current->num_keys];
 }
 
-// Find the in-order successor (smallest value in right subtree)
+// Find the in-order successor (the smallest value in the right subtree)
 int find_successor(const struct RowNode *node) {
     // Start at the given node
     const struct RowNode *current = node;
@@ -540,7 +533,7 @@ void shift_left(struct RowNode *node, const int pos) {
 }
 
 // Helper function to check if a node can spare a key (has more than minimum keys)
-int can_spare_key(struct RowNode *node) {
+int can_spare_key(const struct RowNode *node) {
     return node && node->num_keys > ROW_MIN_KEYS;
 }
 
@@ -548,11 +541,11 @@ int can_spare_key(struct RowNode *node) {
 void handle_underfull_node(struct RowNode *parent, int idx) {
     struct RowNode *current = parent->plink[idx];
     
-    // Try borrowing from left sibling
+    // Try borrowing from the left sibling
     if (idx > 0 && can_spare_key(parent->plink[idx-1])) {
         struct RowNode *left_sibling = parent->plink[idx-1];
         
-        // Shift all keys and children in current node to the right
+        // Shift all keys and children in the current node to the right
         for (int i = current->num_keys; i > 0; i--) {
             current->keys[i+1] = current->keys[i];
             current->plink[i+1] = current->plink[i];
@@ -579,7 +572,7 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
         return;
     }
     
-    // Try borrowing from right sibling
+    // Try borrowing from the right sibling
     if (idx < parent->num_keys && can_spare_key(parent->plink[idx+1])) {
         struct RowNode *right_sibling = parent->plink[idx+1];
         
@@ -595,7 +588,7 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
         // Move leftmost key from right sibling to parent
         parent->keys[idx+1] = right_sibling->keys[1];
         
-        // Shift all keys and children in right sibling to the left
+        // Shift all keys and children in the right sibling to the left
         for (int i = 1; i < right_sibling->num_keys; i++) {
             right_sibling->keys[i] = right_sibling->keys[i+1];
             right_sibling->plink[i-1] = right_sibling->plink[i];
@@ -610,7 +603,7 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
         return;
     }
     
-    // If can't borrow, merge with a sibling
+    // If you can't borrow, merge with a sibling
     if (idx > 0) {
         // Merge with left sibling
         struct RowNode *left_sibling = parent->plink[idx-1];
@@ -630,7 +623,7 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
         // Update key count
         left_sibling->num_keys += current->num_keys + 1;
         
-        // Remove parent key and update parent's child pointer
+        // Remove the parent key and update the parent's child pointer
         shift_left(parent, idx);
         
         // Free memory and return page to free queue
@@ -655,7 +648,7 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
         // Update key count
         current->num_keys += right_sibling->num_keys + 1;
         
-        // Remove parent key and update parent's child pointer
+        // Remove the parent key and update the parent's child pointer
         shift_left(parent, idx+1);
         
         // Free memory and return page to free queue
@@ -677,7 +670,7 @@ void delete_value(struct RowNode *node, const int val) {
 
     // If value is found in this node
     if (pos <= node->num_keys && val == node->keys[pos]) {
-        // Case 1: If node is a leaf, simply remove the value
+        // Case 1: If a node is a leaf, remove the value
         if (node->is_leaf) {
             shift_left(node, pos);
             if (node == root && node->num_keys == 0) {
@@ -690,33 +683,33 @@ void delete_value(struct RowNode *node, const int val) {
             printf("Value %d deleted from the tree\n", val);
             return;
         } 
-        // Case 2: If node is an internal node
+        // Case 2: If a node is an internal node
         else {
-            // Replace with predecessor or successor
+            // Replace it with a predecessor or successor
             if (node->plink[pos-1] != NULL) {
-                // Find the predecessor from left subtree
+                // Find the predecessor from the left subtree
                 const int pred = find_predecessor(node->plink[pos-1]);
                 node->keys[pos] = pred;
                 delete_value(node->plink[pos-1], pred);
                 
-                // Check if child became underfull
+                // Check if the child became underfull
                 if (node->plink[pos-1]->num_keys < ROW_MIN_KEYS) {
                     handle_underfull_node(node, pos-1);
                 }
             } else {
-                // Find the successor from right subtree
+                // Find the successor from the right subtree
                 const int succ = find_successor(node->plink[pos]);
                 node->keys[pos] = succ;
                 delete_value(node->plink[pos], succ);
                 
-                // Check if child became underfull
+                // Check if the child became underfull
                 if (node->plink[pos]->num_keys < ROW_MIN_KEYS) {
                     handle_underfull_node(node, pos);
                 }
             }
         }
     } 
-    // If value is not found in this node, search in the correct subtree
+    // If a value is not found in this node, search in the correct subtree
     else {
         // If we've reached a leaf without finding the value, it's not in the tree
         if (node->is_leaf) {
@@ -724,10 +717,10 @@ void delete_value(struct RowNode *node, const int val) {
             return;
         }
         
-        // Recursively delete from the appropriate child
+        // Recursively delete it from the appropriate child
         delete_value(node->plink[pos], val);
         
-        // Check if child became underfull
+        // Check if the child became underfull
         if (node->plink[pos]->num_keys < ROW_MIN_KEYS) {
             handle_underfull_node(node, pos);
         }
@@ -743,7 +736,7 @@ void delete_value_from_tree(const int val) {
 
     delete_value(root, val);
 
-    // If root has only one child left, make that child the new root
+    // If the root has only one child left, make that child the new root
     if (root->num_keys == 0 && !root->is_leaf) {
         struct RowNode *temp = root;
         root = root->plink[0];
@@ -759,7 +752,7 @@ void insert(const int val) {
 
     const int flag = set_value(val, &i, root, &child);
     
-    // If root was split or it's the first insertion, create new root
+    // If the root was split, or it's the first insertion, create a new root
     if (flag) {
         struct RowNode *new_root = create_node(i, child);
         new_root->is_leaf = 0;  // New root with children is not a leaf
