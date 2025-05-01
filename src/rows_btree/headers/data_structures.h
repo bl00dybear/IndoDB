@@ -51,6 +51,7 @@ extern int serialized_count;
 
 typedef struct DataFile {
     int fd;
+    void *start_ptr;
     ssize_t size;
     void *write_ptr;
     bool dirty;

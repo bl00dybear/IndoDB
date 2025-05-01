@@ -9,7 +9,7 @@
 
 
 DBFile* db;
-DBFile* df;
+DataFile* df;
 uint64_t global_id = 0;
 
 void cli_interactions(){
@@ -26,63 +26,91 @@ void cli_interactions(){
         printf("7. Exit\n");
 
         int choice;
-        scanf("%d", &choice);
+        if (scanf("%d", &choice) != 1) {
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF);
+
+            clearerr(stdin);
+
+            printf("Invalid input. Please enter a number.\n");
+            continue;
+        }
+
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
 
         switch (choice) {
-            case 1:
-                char buffer[10240];
+            case 1: {
+                char buffer[102400];
+                size_t total_len = 0;
+                const size_t capacity = sizeof(buffer) - 1;
 
-                int c;
-                while ((c = getchar()) != '\n' && c != EOF);
+                printf("Enter text to write (press Enter followed by Ctrl+D to finish):\n");
 
-
-                printf("Enter text to write: ");
-                if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-                    size_t len = strlen(buffer);
-                    if (len > 0 && buffer[len-1] == '\n') {
-                        buffer[len-1] = '\0';
-                        len--;
+                while (total_len < capacity) {
+                    c = getchar();
+                    if (c == EOF) {
+                        clearerr(stdin);
+                        break;
                     }
-
-                    void* written_address = write_row(df, buffer, len + 1);
-                    printf("Text written at address: %p\n", written_address);
+                    buffer[total_len++] = (char)c;
                 }
 
-                uint64_t current_id = global_id++;  // luăm ID-ul curent și îl incrementăm
+                total_len-=1;
+                buffer[total_len] = '\0';
+
+                if (total_len > 0) {
+                    void* written_address = write_row(df, buffer, total_len + 1);
+                    printf("Text written at address: %p\n", written_address);
+                    printf("Total characters written: %zu\n", total_len);
+                }
+
+                uint64_t current_id = global_id++;
                 insert(current_id);
                 printf("Inserted record with ID: %lu\n", current_id);
 
-                set_file_dirty(db,true);
+                set_file_dirty(db, true);
                 break;
-
-            case 2:
+            }
+            case 2: {
                 printf("Enter a value to delete: ");
                 int del;
-                scanf("%d", &del);
+                if (scanf("%d", &del) != 1) {
+                    printf("Invalid input\n");
+                    while ((c = getchar()) != '\n' && c != EOF);
+                    clearerr(stdin);
+                    break;
+                }
                 delete_value_from_tree(del);
-                set_file_dirty(db,true);
+                set_file_dirty(db, true);
                 break;
-            case 3:
+            }
+            case 3: {
                 printf("Enter a value to search: ");
                 int search_val;
-                scanf("%d", &search_val);
+                if (scanf("%d", &search_val) != 1) {
+                    printf("Invalid input\n");
+                    while ((c = getchar()) != '\n' && c != EOF);
+                    clearerr(stdin);
+                    break;
+                }
                 int pos;
                 search(search_val, &pos, root);
                 break;
+            }
             case 4:
                 printf("1\n");
-                printf("Root nums  %ld, %ld, %ld\n", root->keys[1],root->keys[2],root->keys[3]);
+                printf("Root nums  %ld, %ld, %ld\n", root->keys[1], root->keys[2], root->keys[3]);
                 printf("2\n");
                 traversal(root);
                 printf("\n");
-                // RowNode *temp = root;
                 break;
             case 5:
                 commit_changes(db);
                 break;
             case 6:
                 root = load_btree_from_disk(db);
-                printf("%ld\n",root->page_num);
+                printf("%ld\n", root->page_num);
                 if (root) {
                     printf("B-Tree successfully loaded!\n");
                 } else {
@@ -92,9 +120,9 @@ void cli_interactions(){
             case 7:
                 exit = true;
                 break;
-
             default:
                 printf("Invalid choice\n");
+                break;
         }
     }
 }

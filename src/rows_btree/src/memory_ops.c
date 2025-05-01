@@ -45,6 +45,9 @@ void memory_map_db_file(DBFile* db){
 
 void memory_map_df_file(DataFile* df){
     df->write_ptr = mmap(NULL, df->size, PROT_READ | PROT_WRITE, MAP_SHARED, df->fd, 0);
+    df->start_ptr = df->write_ptr;
+    df->write_ptr = (char*)df->write_ptr + PAGE_SIZE;
+
     if (df->write_ptr == MAP_FAILED) {
         perror("Error mapping database file");
         exit(EXIT_FAILURE);
