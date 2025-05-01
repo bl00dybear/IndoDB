@@ -20,7 +20,7 @@ typedef struct RowNode{
     uint64_t keys[ROW_MAX_KEYS];
     void* raw_data[ROW_MAX_KEYS];            //also 8 bytes
     uint64_t link[ROW_MAX_KEYS+1];
-    struct RowNode *plink[ROW_MAX_KEYS+1];    //21 liberi
+    struct RowNode *plink[ROW_MAX_KEYS+1];    //21 free bytes
 }RowNode;
 
 extern RowNode *root;

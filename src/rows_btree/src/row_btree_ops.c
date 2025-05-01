@@ -1,10 +1,11 @@
 #include "../headers/row_btree_ops.h"
 #include "../headers/config.h"
 #include "../headers/queue.h"
+#include  "../headers/memory_ops.h"
 
 
-struct RowNode *create_node(const int val, struct RowNode *child) {
-    struct RowNode *newNode = (struct RowNode *)malloc(sizeof(struct RowNode));
+RowNode *create_node(const uint64_t key,void *data, RowNode *child) {
+    RowNode *newNode = malloc(sizeof(struct RowNode));
     if (!newNode) {
         perror("Memory allocation failed");
         exit(EXIT_FAILURE);
@@ -12,7 +13,8 @@ struct RowNode *create_node(const int val, struct RowNode *child) {
     
     // Initialize the node
     memset(newNode, 0, sizeof(struct RowNode));
-    newNode->keys[1] = val;
+    newNode->keys[1] = key;
+    newNode->raw_data[1] = data;
     newNode->num_keys = 1;
     for (int i = 0; i < ROW_MAX_KEYS + 1; i++) {
     newNode->link[i] = 0;  // Initialize all links to 0
@@ -46,20 +48,24 @@ struct RowNode *create_node(const int val, struct RowNode *child) {
 }
 
 // Function to insert a value into a node at the given position
-void insert_node(const int val, const int pos, struct RowNode *node, struct RowNode *child) {
+void insert_node(const uint64_t key, void* data,const int pos, RowNode *node, RowNode *child) {
     int j = node->num_keys;
 
     // Shift values and child pointers to make space for the new value
     while (j > pos) {
         node->keys[j + 1] = node->keys[j];
+        node->raw_data[j + 1] = node->raw_data[j];
         node->plink[j + 1] = node->plink[j];
         node->link[j + 1] = node->link[j];
         j -= 1;
     }
 
     // Insert value at the correct position
-    node->keys[j + 1] = val;
+    node->keys[j + 1] = key;
+    node->raw_data[j + 1] = data;
     node->plink[j + 1] = child;
+
+    // TODO: verify link here
     
     // Update link if child exists
     if(child != NULL) {
@@ -74,7 +80,7 @@ void insert_node(const int val, const int pos, struct RowNode *node, struct RowN
 }
 
 // Function to split a node when it exceeds the maximum limit
-void split_node(const int val, int *pval, const int pos, struct RowNode *node, struct RowNode *child, struct RowNode **newNode) {
+void split_node(const uint64_t key,void *data, int *pval, const int pos, RowNode *node, struct RowNode *child, RowNode **newNode) {
     int median;
 
     // Determine the median index to split
@@ -91,7 +97,7 @@ void split_node(const int val, int *pval, const int pos, struct RowNode *node, s
     }
     
     // Initialize the new node
-    memset(*newNode, 0, sizeof(struct RowNode));
+    memset(*newNode, 0, sizeof(RowNode));
     
     // The new node inherits the leaf status of the original node
     (*newNode)->is_leaf = node->is_leaf;
@@ -115,9 +121,9 @@ void split_node(const int val, int *pval, const int pos, struct RowNode *node, s
 
     // Insert the new value into the appropriate node (left or right)
     if (pos <= ROW_MIN_KEYS) {
-        insert_node(val, pos, node, child);
+        insert_node(key,data, pos, node, child);
     } else {
-        insert_node(val, pos - median, *newNode, child);
+        insert_node(key, data,pos - median, *newNode, child);
     }
 
     // Move median value up to parent
@@ -135,21 +141,21 @@ void split_node(const int val, int *pval, const int pos, struct RowNode *node, s
 }
 
 // Function to determine where to insert a value in the B-tree
-int set_value(const int val, int *pval, struct RowNode *node, struct RowNode **child) {
+int set_value(const uint64_t key, void* data, int *pval, struct RowNode *node, struct RowNode **child) {
     int pos;
 
     // If a tree is empty, or we've reached a leaf, create a new node
     if (!node) {
-        *pval = val;
+        *pval = key;
         *child = NULL;
         return 1;
     }
 
     // Finding the correct position for the value in the current node
-    if (val < node->keys[1]) {
+    if (key < node->keys[1]) {
         pos = 0;
     } else {
-        for (pos = node->num_keys; (val < node->keys[pos] && pos > 1); pos--);
+        for (pos = node->num_keys; (key < node->keys[pos] && pos > 1); pos--);
 
         // Prevent duplicate values (optional)
         // if (val == node->keys[pos]) {
@@ -161,32 +167,31 @@ int set_value(const int val, int *pval, struct RowNode *node, struct RowNode **c
     // If the node is a leaf, insert directly
     if (node->is_leaf) {
         if (node->num_keys < ROW_MAX_KEYS) {
-            insert_node(val, pos, node, NULL);
+            insert_node(key,data, pos, node, NULL);
             return 0;
         } else {
             // Split leaf node
-            split_node(val, pval, pos, node, NULL, child);
+            split_node(key,data, pval, pos, node, NULL, child);
             return 1;
         }
-    } else {
-        // For internal nodes, recursively insert into the correct subtree
-        if (set_value(val, pval, node->plink[pos], child)) {
-            // If the child was split, insert the promoted value
-            if (node->num_keys < ROW_MAX_KEYS) {
-                insert_node(*pval, pos, node, *child);
-                return 0;
-            } else {
-                // Split internal node
-                split_node(*pval, pval, pos, node, *child, child);
-                return 1;
-            }
+    }
+    // For internal nodes, recursively insert into the correct subtree
+    if (set_value(key,data, pval, node->plink[pos], child)) {
+        // If the child was split, insert the promoted value
+        if (node->num_keys < ROW_MAX_KEYS) {
+            insert_node(*pval,data, pos, node, *child);
+            return 0;
+        } else {
+            // Split internal node
+            split_node(*pval,data, pval, pos, node, *child, child);
+            return 1;
         }
     }
     return 0;
 }
 
 // Function to search for a value in the B-tree
-void search(const int val, int *pos, struct RowNode *myNode) {
+void search(const int val, int *pos, RowNode *myNode) {
     if (!myNode) {
         printf("%d not found in the tree\n", val);
         return;
@@ -196,7 +201,8 @@ void search(const int val, int *pos, struct RowNode *myNode) {
     if (val < myNode->keys[1]) {
         *pos = 0;
     } else {
-        for (*pos = myNode->num_keys; (val < myNode->keys[*pos] && *pos > 1); (*pos)--);
+        for (*pos = myNode->num_keys; (val < myNode->keys[*pos] && *pos > 1); (*pos)--)
+            ;
 
         // If found, print a message and return
         if (val == myNode->keys[*pos]) {
@@ -738,26 +744,25 @@ void delete_value_from_tree(const int val) {
 
     // If the root has only one child left, make that child the new root
     if (root->num_keys == 0 && !root->is_leaf) {
-        struct RowNode *temp = root;
+        RowNode *temp = root;
         root = root->plink[0];
         push(free_page_queue, temp->page_num);
         free(temp);
     }
 }
 
-// Function to insert a value into the B-tree
-void insert(const int val) {
+void insert(const uint64_t key, void* data) {
     int i;
-    struct RowNode *child;
+    RowNode *child;
 
-    const int flag = set_value(val, &i, root, &child);
+    const int flag = set_value(key,data, &i, root, &child);
     
     // If the root was split, or it's the first insertion, create a new root
     if (flag) {
-        struct RowNode *new_root = create_node(i, child);
+        RowNode *new_root = create_node(i,data, child);
         new_root->is_leaf = 0;  // New root with children is not a leaf
         root = new_root;
     }
 
-    printf("Inserted value %d, root page: %lu\n", val, root->page_num);
+    printf("Inserted value %ld, root page: %lu\n", key, root->page_num);
 }

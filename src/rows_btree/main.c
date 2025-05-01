@@ -10,7 +10,7 @@
 
 DBFile* db;
 DataFile* df;
-uint64_t global_id = 0;
+uint64_t global_id = 1;
 
 void cli_interactions(){
     bool exit = false;
@@ -28,7 +28,8 @@ void cli_interactions(){
         int choice;
         if (scanf("%d", &choice) != 1) {
             int c;
-            while ((c = getchar()) != '\n' && c != EOF);
+            while ((c = getchar()) != '\n' && c != EOF)
+                ;
 
             clearerr(stdin);
 
@@ -37,7 +38,8 @@ void cli_interactions(){
         }
 
         int c;
-        while ((c = getchar()) != '\n' && c != EOF);
+        while ((c = getchar()) != '\n' && c != EOF)
+            ;
 
         switch (choice) {
             case 1: {
@@ -60,16 +62,19 @@ void cli_interactions(){
                 buffer[total_len] = '\0';
 
                 if (total_len > 0) {
-                    void* written_address = write_row(df, buffer, total_len + 1);
+                    void *written_address = write_row(df, buffer, total_len + 1);
                     printf("Text written at address: %p\n", written_address);
                     printf("Total characters written: %zu\n", total_len);
+
+                    const uint64_t current_id = global_id++;
+                    insert(current_id,written_address);
+                    printf("Inserted record with ID: %lu\n", current_id);
+                    printf("Record written at address: %p\n", written_address);
+
+                    set_file_dirty(db, true);
                 }
 
-                uint64_t current_id = global_id++;
-                insert(current_id);
-                printf("Inserted record with ID: %lu\n", current_id);
 
-                set_file_dirty(db, true);
                 break;
             }
             case 2: {
@@ -77,7 +82,8 @@ void cli_interactions(){
                 int del;
                 if (scanf("%d", &del) != 1) {
                     printf("Invalid input\n");
-                    while ((c = getchar()) != '\n' && c != EOF);
+                    while ((c = getchar()) != '\n' && c != EOF)
+                        ;
                     clearerr(stdin);
                     break;
                 }
