@@ -63,3 +63,113 @@ void* write_row(DataFile* df, const void *row, const size_t row_size) {
 
     return written_address;
 }
+
+bool serialize_datafile(DataFile* df) {
+    if (!df) {
+        fprintf(stderr, "Error: NULL DataFile pointer\n");
+        return false;
+    }
+
+    if (!df->start_ptr) {
+        fprintf(stderr, "Error: NULL start_ptr in DataFile\n");
+        return false;
+    }
+
+    if (!df->write_ptr) {
+        fprintf(stderr, "Error: NULL write_ptr in DataFile\n");
+        return false;
+    }
+
+    typedef struct {
+        uint64_t write_ptr_offset;
+        uint64_t magic;
+    } DataFileHeader;
+
+    DataFileHeader header;
+    header.write_ptr_offset = (char*)df->write_ptr - (char*)df->start_ptr;
+    header.magic = MAGIC_NUMBER;
+
+    if (header.write_ptr_offset >= df->size) {
+        fprintf(stderr, "Error: Invalid write_ptr offset: %lu exceeds file size: %ld\n",
+                header.write_ptr_offset, df->size);
+        return false;
+    }
+
+    if (memcpy(df->start_ptr, &header, sizeof(header)) != df->start_ptr) {
+        fprintf(stderr, "Error: Failed to write header to file\n");
+        return false;
+    }
+
+    if (msync(df->start_ptr, sizeof(header), MS_SYNC) == -1) {
+        perror("Error syncing header to disk");
+        return false;
+    }
+
+    return true;
+}
+
+bool deserialize_datafile(DataFile* df) {
+    if (!df) {
+        fprintf(stderr, "Error: NULL DataFile pointer\n");
+        return false;
+    }
+
+    if (!df->start_ptr) {
+        fprintf(stderr, "Error: NULL start_ptr in DataFile\n");
+        return false;
+    }
+
+    if (df->size < sizeof(uint64_t) * 2) {
+        fprintf(stderr, "Error: File too small to contain header\n");
+        return false;
+    }
+
+    typedef struct {
+        uint64_t write_ptr_offset;
+        uint64_t magic;
+    } DataFileHeader;
+
+
+    DataFileHeader header;
+    memcpy(&header, df->start_ptr, sizeof(header));
+
+    if (header.magic != MAGIC_NUMBER) {
+        fprintf(stderr, "Error: Invalid file format (magic number mismatch)\n");
+        return false;
+    }
+
+    if (header.write_ptr_offset >= df->size) {
+        fprintf(stderr, "Error: Invalid write_ptr offset in file: %lu\n",
+                header.write_ptr_offset);
+        return false;
+    }
+
+    df->write_ptr = (char*)df->start_ptr + header.write_ptr_offset;
+
+    return true;
+}
+
+void set_file_dirty_df(DataFile* df,bool dirty) {
+    df->dirty= dirty;
+}
+
+void commit_changes_df(DataFile *df) {
+    if (df->dirty) {
+        if (!serialize_datafile(df)) {
+            fprintf(stderr, "Error: Failed to serialize data file\n");
+            return;
+        }
+
+        set_file_dirty_df(df, false);
+        printf("Changes (raw data) successfully committed to disk.\n");
+    }
+}
+
+void load_datafile(DataFile* df) {
+    if (!deserialize_datafile(df)) {
+        fprintf(stderr, "Error: Failed to deserialize data file\n");
+        return;
+    }
+    printf("Data file loaded successfully.\n");
+    printf("Write pointer offset: %p\n", df->write_ptr - df->start_ptr);
+}

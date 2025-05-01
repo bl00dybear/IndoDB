@@ -71,7 +71,8 @@ void cli_interactions(){
                     printf("Inserted record with ID: %lu\n", current_id);
                     printf("Record written at address: %p\n", written_address);
 
-                    set_file_dirty(db, true);
+                    set_file_dirty_db(db, true);
+                    set_file_dirty_df(df,true);
                 }
 
 
@@ -88,7 +89,8 @@ void cli_interactions(){
                     break;
                 }
                 delete_value_from_tree(del);
-                set_file_dirty(db, true);
+                set_file_dirty_db(db, true);
+                set_file_dirty_df(df, true);
                 break;
             }
             case 3: {
@@ -112,7 +114,8 @@ void cli_interactions(){
                 printf("\n");
                 break;
             case 5:
-                commit_changes(db);
+                commit_changes_db(db);
+                commit_changes_df(df);
                 break;
             case 6:
                 root = load_btree_from_disk(db);
@@ -122,6 +125,8 @@ void cli_interactions(){
                 } else {
                     printf("Failed to load B-Tree.\n");
                 }
+
+                load_datafile(df);
                 break;
             case 7:
                 exit = true;
@@ -168,7 +173,8 @@ int main(){
     memory_map_db_file(db);
     memory_map_df_file(df);
 
-    set_file_dirty(db, false);
+    set_file_dirty_db(db, false);
+    set_file_dirty_df(df, false);
     set_new_file_free_blocks(db);
 
     printf("%d %ld\n",db->fd,db->size);

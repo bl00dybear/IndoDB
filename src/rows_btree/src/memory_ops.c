@@ -46,7 +46,7 @@ void memory_map_db_file(DBFile* db){
 void memory_map_df_file(DataFile* df){
     df->write_ptr = mmap(NULL, df->size, PROT_READ | PROT_WRITE, MAP_SHARED, df->fd, 0);
     df->start_ptr = df->write_ptr;
-    df->write_ptr = (char*)df->write_ptr + PAGE_SIZE;
+    df->write_ptr = (char*)df->write_ptr + BLOCK_SIZE/16;
 
     if (df->write_ptr == MAP_FAILED) {
         perror("Error mapping database file");
@@ -54,7 +54,7 @@ void memory_map_df_file(DataFile* df){
     }
 }
 
-void set_file_dirty(DBFile* db, bool dirty){
+void set_file_dirty_db(DBFile* db, bool dirty){
     db->dirty = dirty;
 }
 
@@ -112,7 +112,7 @@ void write_on_memory_block(DBFile *db, void* new_data, u_int64_t page_num){
     db->dirty = 1;
 }
 
-void commit_changes(DBFile *db) {
+void commit_changes_db(DBFile *db) {
     if (!db->dirty) {
         printf("No changes to commit.\n");
         return;
@@ -125,6 +125,6 @@ void commit_changes(DBFile *db) {
         exit(EXIT_FAILURE);
     }
 
-    set_file_dirty(db, false);
+    set_file_dirty_db(db, false);
     printf("Changes successfully committed to disk.\n");
 }
