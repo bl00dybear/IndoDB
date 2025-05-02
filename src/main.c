@@ -1,40 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "cJSON.h"
+#include "../include/data/parser_structures.h"
+#include "../include/libraries.h"
+#include "../include/utils/cJSON.h"
+#include "../include/config.h"
 
-#define MAX_INPUT_SIZE 1024
 
-typedef enum {
-    STATEMENT_INSERT,
-    STATEMENT_SELECT,
-} StatementType;
-
-typedef struct {
-    char **columns;
-    int num_columns;
-    char *table;
-    struct {
-        char *value;
-        char *valueType;
-    } *values;
-    int num_values;
-} InsertStmtStruct;
-
-typedef struct {
-    char **columns;
-    int num_columns;
-    char *table;
-    char *condition;
-} SelectStmtStruct;
-
-typedef struct {
-    StatementType type;
-    union {
-        InsertStmtStruct insertStmt;
-        SelectStmtStruct selectStmt;
-    };
-} Statement;
 
 Statement parse_statement(const char *filename) {
     FILE *fp = fopen(filename, "r");
@@ -162,7 +131,7 @@ int cli() {
         
         if (strlen(input) > 0) {
             // Parse input through sql_parser
-            FILE *fp = popen("./parser/sql_parser", "w");
+            FILE *fp = popen("../output/sql_parser", "w");
             if (fp == NULL) {
                 perror("Error opening pipe");
                 return 1;
@@ -171,7 +140,7 @@ int cli() {
             pclose(fp);
         
             // Initialize Statement struct from output.json
-            Statement stmt = parse_statement("./output.json");
+            Statement stmt = parse_statement("../output/output.json");
         
             // Test the parsed struct
             if (stmt.type == STATEMENT_INSERT) {

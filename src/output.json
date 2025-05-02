@@ -1,6 +1,0 @@
-{
-  "columns": ["col1"],
-  "statement": "InsertStmt",
-  "table": "tabel",
-  "values": [{ "value": "val1", "valueType": "String" }]
-}
