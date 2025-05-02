@@ -192,7 +192,7 @@ parseAnd = lexeme $ do
 
 parseNot :: Parser Condition
 parseNot = lexeme $
-    (lexeme (string "NOT") *> (Not <$> parseNot)) <|> parseBaseCondition
+    lexeme (string "NOT") *> (Not <$> parseNot) <|> parseBaseCondition
 
 parseBaseCondition :: Parser Condition
 parseBaseCondition = lexeme (parseParens <|> parseComparison)
@@ -265,15 +265,13 @@ parseCreateDb :: Parser SQLStatement
 parseCreateDb = lexeme $ do
     void $ lexeme (string "CREATE")
     void $ lexeme (string "DATABASE")
-    name <- identifier
-    return $ CreateDbStmt name
+    CreateDbStmt <$> identifier
 
 parseDropDb :: Parser SQLStatement
 parseDropDb = lexeme $ do
     void $ lexeme (string "DROP")
     void $ lexeme (string "DATABASE")
-    name <- identifier
-    return $ DropDbStmt name
+    DropDbStmt <$> identifier
 
 parseDelete :: Parser SQLStatement
 parseDelete = lexeme $ do
