@@ -303,14 +303,3 @@ main = do
         Right ast -> do
             let jsonOutput = encode ast
             B.writeFile "./src/output.json" jsonOutput
-
-
-
-{-
- Cristi esti frtl meu da smr eu ai cate un comentariu
- la suta de linii de cod pe bune macar la misto puteai
- sa mai pui ca pana la finalul semestrului nici tu nu
- stii ce ai facut aici
--}
-
-
