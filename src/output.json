@@ -1,0 +1,11 @@
+{
+  "columns": [
+    {
+      "constraint": null,
+      "name": "var1",
+      "type": { "length": 255, "type": "String" }
+    }
+  ],
+  "statement": "CreateStmt",
+  "table": "tb"
+}

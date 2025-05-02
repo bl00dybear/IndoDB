@@ -233,6 +233,7 @@ int cli() {
             } else if (stmt->type == STATEMENT_SELECT) {
                 printf("Parsed a SELECT statement!\n");
             }
+            free_statement(&stmt);
         }
     }
 }
