@@ -1,4 +1,5 @@
 #include "../../include/core/datafile_ops.h"
+#include "../../include/data/parser_structures.h"
 
 void allocate_new_block(DataFile *df) {
     const size_t new_size = df->size + BLOCK_SIZE;
@@ -172,4 +173,89 @@ void load_datafile(DataFile* df) {
     }
     printf("Data file loaded successfully.\n");
     printf("Write pointer offset: %p\n", df->write_ptr - df->start_ptr);
+}
+
+int string_to_int(const char* str) {
+    // Verificare dacă șirul este NULL
+    if (str == NULL) {
+        return 0;
+    }
+
+    int result = 0;
+    int sign = 1;
+    int i = 0;
+
+    // Verificare semn
+    if (str[0] == '-') {
+        sign = -1;
+        i = 1; // Începe de la următorul caracter
+    } else if (str[0] == '+') {
+        i = 1; // Începe de la următorul caracter
+    }
+
+    // Parcurge șirul și construiește numărul
+    while (str[i] != '\0') {
+        // Verifică dacă caracterul este o cifră
+        if (str[i] >= '0' && str[i] <= '9') {
+            // Evită overflow
+            if (result > INT_MAX / 10 ||
+                (result == INT_MAX / 10 && str[i] - '0' > INT_MAX % 10)) {
+                // Returnează INT_MAX sau INT_MIN în caz de overflow
+                return (sign == 1) ? INT_MAX : INT_MIN;
+                }
+
+            // Adaugă cifra la rezultat
+            result = result * 10 + (str[i] - '0');
+        } else {
+            // Dacă nu este cifră, oprește procesarea
+            break;
+        }
+        i++;
+    }
+
+    return result * sign;
+}
+
+char* int_to_bytes_string(int val) {
+    char* result = (char*)malloc(sizeof(char)*9);
+
+    if (val == 0) {
+        for (int i = 0; i < 8; i++) {
+            result[i] = '\0';
+        }
+        result[8] = '\0';
+    }
+    for (int i = 0; i < 8; i++) {
+        printf("%ld",result[i]);
+    }
+    // sprintf(result, "%d", val);
+    return result;
+}
+
+
+char* get_row_content(Statement *stmt) {
+    char *row_content = malloc(MAX_BUFFER_SIZE);
+    size_t row_size = 0;
+    size_t num_of_values = sizeof(stmt->insertStmt.values) * 4 / sizeof(stmt->insertStmt.values[0]);
+
+    u_int64_t i = 0;
+
+    while (stmt->insertStmt.values[i].value != NULL) {
+        if (strcmp(stmt->insertStmt.values[i].valueType,"Int") == 0) {
+            // printf("aia");
+            int value = string_to_int(stmt->insertStmt.values[i].value);
+            char* bytes_string = int_to_bytes_string(value);
+        }
+        else if (strcmp(stmt->insertStmt.values[i].valueType,"String") == 0) {
+
+        }
+        // printf("%s\n",stmt->insertStmt.values[i].value);
+        i+=1;
+    }
+    // printf("%ld\n",sizeof(stmt->insertStmt.values));
+    // printf("%ld\n",sizeof(stmt->insertStmt.values[0]));
+    //
+    // printf("%ld\n",num_of_values);
+
+    return row_content;
 }

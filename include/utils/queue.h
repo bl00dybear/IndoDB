@@ -9,6 +9,6 @@ void push(Queue* queue, int value);
 int pop(Queue* queue);
 int front(Queue* queue);
 void display(Queue* queue);
-void free_queue(Queue* queue);
+void destroy_queue(Queue* queue);
 
-#endif /* QUEUE_H */
+#endif

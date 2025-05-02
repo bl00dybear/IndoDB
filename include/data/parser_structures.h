@@ -34,3 +34,5 @@ typedef struct {
 
 
 #endif
+
+// INSERT INTO tabela (col_1, col_2) VALUES (1, 'aaaa');
