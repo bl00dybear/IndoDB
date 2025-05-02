@@ -8,6 +8,6 @@ void* write_row(DataFile* df, const void *row, size_t row_size);
 void commit_changes_df(DataFile* df);
 void set_file_dirty_df(DataFile*df,bool dirty);
 void load_datafile(DataFile* df);
-char* get_row_content(Statement *stmt);
+void* get_row_content(Statement *stmt, uint64_t * row_index);
 
 #endif

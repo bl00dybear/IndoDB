@@ -161,13 +161,18 @@ void free_memory(const Statement* stmt) {
 void process_statement(Statement *stmt) {
     switch (stmt->type) {
         case STATEMENT_INSERT: {
-            // void *written_address = write_row(df, buffer, total_len + 1);
-            // const uint64_t current_id = global_id++;
-            // // insert(current_id,written_address);
-            // set_file_dirty_db(db, true);
-            // set_file_dirty_df(df,true);
-            // printf("Aici");
-            char* row_content = get_row_content(stmt);
+            uint64_t row_size = 0;
+            char* row_content = get_row_content(stmt,&row_size);
+            printf("Row content: %ld\n",row_size);
+            void *written_address = write_row(df, row_content, row_size);
+            const uint64_t current_id = global_id++;
+            insert(current_id,written_address);
+            set_file_dirty_db(db, true);
+            set_file_dirty_df(df,true);
+
+
+            commit_changes_db(db);
+            commit_changes_df(df);
         }
         case STATEMENT_SELECT: {}
         default: ;
@@ -263,9 +268,20 @@ void database_init() {
 
     if(!db->size)
         init_create_db_memory_block(db);
+    // else {
+    //     root = load_btree_from_disk(db);
+    //     printf("%ld\n", root->page_num);
+    //     if (root) {
+    //         printf("B-Tree successfully loaded!\n");
+    //     } else {
+    //         printf("Failed to load B-Tree.\n");
+    //     }
+    // }
 
     if(!df->size)
         init_create_df_memory_block(df);
+    // else
+    //     load_datafile(df);
 
     printf("File size %ld\n",db->size);
 

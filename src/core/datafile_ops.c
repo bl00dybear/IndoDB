@@ -176,7 +176,6 @@ void load_datafile(DataFile* df) {
 }
 
 int string_to_int(const char* str) {
-    // Verificare dacă șirul este NULL
     if (str == NULL) {
         return 0;
     }
@@ -185,29 +184,22 @@ int string_to_int(const char* str) {
     int sign = 1;
     int i = 0;
 
-    // Verificare semn
     if (str[0] == '-') {
         sign = -1;
-        i = 1; // Începe de la următorul caracter
+        i = 1;
     } else if (str[0] == '+') {
-        i = 1; // Începe de la următorul caracter
+        i = 1;
     }
 
-    // Parcurge șirul și construiește numărul
     while (str[i] != '\0') {
-        // Verifică dacă caracterul este o cifră
         if (str[i] >= '0' && str[i] <= '9') {
-            // Evită overflow
             if (result > INT_MAX / 10 ||
                 (result == INT_MAX / 10 && str[i] - '0' > INT_MAX % 10)) {
-                // Returnează INT_MAX sau INT_MIN în caz de overflow
                 return (sign == 1) ? INT_MAX : INT_MIN;
                 }
 
-            // Adaugă cifra la rezultat
             result = result * 10 + (str[i] - '0');
         } else {
-            // Dacă nu este cifră, oprește procesarea
             break;
         }
         i++;
@@ -216,46 +208,35 @@ int string_to_int(const char* str) {
     return result * sign;
 }
 
-char* int_to_bytes_string(int val) {
-    char* result = (char*)malloc(sizeof(char)*9);
 
-    if (val == 0) {
-        for (int i = 0; i < 8; i++) {
-            result[i] = '\0';
-        }
-        result[8] = '\0';
-    }
-    for (int i = 0; i < 8; i++) {
-        printf("%ld",result[i]);
-    }
-    // sprintf(result, "%d", val);
-    return result;
+void serialize_int(Statement *stmt,void*row_content,uint64_t *row_index,uint64_t index) {
+    int64_t value = string_to_int(stmt->insertStmt.values[index].value);
+    void* row_content_int = malloc(sizeof(int64_t));
+
+    *(int64_t*)row_content_int = value;
+    memcpy(row_content + (*row_index), row_content_int, sizeof(int64_t));
+
+    *row_index += sizeof(int64_t);
+
+    free(row_content_int);
 }
 
 
-char* get_row_content(Statement *stmt) {
-    char *row_content = malloc(MAX_BUFFER_SIZE);
-    size_t row_size = 0;
-    size_t num_of_values = sizeof(stmt->insertStmt.values) * 4 / sizeof(stmt->insertStmt.values[0]);
+void* get_row_content(Statement *stmt, uint64_t *row_index) {
+    void *row_content = malloc(MAX_BUFFER_SIZE);
 
-    u_int64_t i = 0;
+    uint64_t index = 0;
 
-    while (stmt->insertStmt.values[i].value != NULL) {
-        if (strcmp(stmt->insertStmt.values[i].valueType,"Int") == 0) {
-            // printf("aia");
-            int value = string_to_int(stmt->insertStmt.values[i].value);
-            char* bytes_string = int_to_bytes_string(value);
+    while (stmt->insertStmt.values[index].value != NULL) {
+        if (strcmp(stmt->insertStmt.values[index].valueType,"Int") == 0) {
+            serialize_int(stmt,row_content,row_index,index);
         }
-        else if (strcmp(stmt->insertStmt.values[i].valueType,"String") == 0) {
-
+        else if (strcmp(stmt->insertStmt.values[index].valueType,"String") == 0) {
+         // TODO : serialize string
         }
-        // printf("%s\n",stmt->insertStmt.values[i].value);
-        i+=1;
+        index+=1;
     }
-    // printf("%ld\n",sizeof(stmt->insertStmt.values));
-    // printf("%ld\n",sizeof(stmt->insertStmt.values[0]));
-    //
-    // printf("%ld\n",num_of_values);
+
 
     return row_content;
 }
