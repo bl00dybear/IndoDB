@@ -36,13 +36,13 @@ typedef struct {
     };
 } Statement;
 
-Statement parse_statement(const char *filename) {
+void parse_statement(const char *filename, Statement *stmt) {
     FILE *fp = fopen(filename, "r");
     if (!fp) {
         perror("Failed to open JSON file");
         exit(1);
     }
-    
+
     fseek(fp, 0, SEEK_END);
     long length = ftell(fp);
     fseek(fp, 0, SEEK_SET);
@@ -57,59 +57,68 @@ Statement parse_statement(const char *filename) {
         exit(1);
     }
 
-    Statement stmt;
     cJSON *statement_type = cJSON_GetObjectItemCaseSensitive(json, "statement");
     if (strcmp(statement_type->valuestring, "InsertStmt") == 0) {
-        stmt.type = STATEMENT_INSERT;
-        
+        stmt->type = STATEMENT_INSERT;
+
         cJSON *columns = cJSON_GetObjectItemCaseSensitive(json, "columns");
         cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
         cJSON *values = cJSON_GetObjectItemCaseSensitive(json, "values");
-    
+
         int num_columns = cJSON_GetArraySize(columns);
         int num_values = cJSON_GetArraySize(values);
-    
-        stmt.insertStmt.num_columns = num_columns;
-        stmt.insertStmt.num_values = num_values;
-    
-        stmt.insertStmt.columns = malloc(num_columns * sizeof(char*));
+
+        stmt->insertStmt.num_columns = num_columns;
+        stmt->insertStmt.num_values = num_values;
+
+        stmt->insertStmt.columns = malloc(num_columns * sizeof(char*));
         for (int i = 0; i < num_columns; i++) {
             cJSON *col = cJSON_GetArrayItem(columns, i);
-            stmt.insertStmt.columns[i] = strdup(col->valuestring);
+            stmt->insertStmt.columns[i] = strdup(col->valuestring);
         }
-    
-        stmt.insertStmt.table = strdup(table->valuestring);
-    
-        stmt.insertStmt.values = malloc(num_values * sizeof(*stmt.insertStmt.values));
+
+        stmt->insertStmt.table = strdup(table->valuestring);
+
+        stmt->insertStmt.values = malloc(num_values * sizeof(*stmt->insertStmt.values));
         for (int i = 0; i < num_values; i++) {
             cJSON *val_obj = cJSON_GetArrayItem(values, i);
             cJSON *val = cJSON_GetObjectItemCaseSensitive(val_obj, "value");
             cJSON *valType = cJSON_GetObjectItemCaseSensitive(val_obj, "valueType");
-    
-            stmt.insertStmt.values[i].value = strdup(val->valuestring);
-            stmt.insertStmt.values[i].valueType = strdup(valType->valuestring);
+
+            if (cJSON_IsString(val)) {
+                stmt->insertStmt.values[i].value = strdup(val->valuestring);
+            } else if (cJSON_IsNumber(val)) {
+                char buffer[32];
+                snprintf(buffer, sizeof(buffer), "%g", val->valuedouble);
+                stmt->insertStmt.values[i].value = strdup(buffer);
+            } else {
+                printf("Unsupported value type in JSON!\n");
+                exit(1);
+            }
+
+            stmt->insertStmt.values[i].valueType = strdup(valType->valuestring);
         }
     } else if (strcmp(statement_type->valuestring, "SelectStmt") == 0) {
-        stmt.type = STATEMENT_SELECT;
+        stmt->type = STATEMENT_SELECT;
         cJSON *columns = cJSON_GetObjectItemCaseSensitive(json, "columns");
         cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
         cJSON *condition = cJSON_GetObjectItemCaseSensitive(json, "condition");
-    
+
         int num_columns = cJSON_GetArraySize(columns);
-        stmt.selectStmt.num_columns = num_columns;
-    
-        stmt.selectStmt.columns = malloc(num_columns * sizeof(char*));
+        stmt->selectStmt.num_columns = num_columns;
+
+        stmt->selectStmt.columns = malloc(num_columns * sizeof(char*));
         for (int i = 0; i < num_columns; i++) {
             cJSON *col = cJSON_GetArrayItem(columns, i);
-            stmt.selectStmt.columns[i] = strdup(col->valuestring);
+            stmt->selectStmt.columns[i] = strdup(col->valuestring);
         }
-    
-        stmt.selectStmt.table = strdup(table->valuestring);
-    
+
+        stmt->selectStmt.table = strdup(table->valuestring);
+
         if (cJSON_IsNull(condition)) {
-            stmt.selectStmt.condition = NULL;
+            stmt->selectStmt.condition = NULL;
         } else {
-            stmt.selectStmt.condition = strdup(condition->valuestring);
+            stmt->selectStmt.condition = strdup(condition->valuestring);
         }
     } else {
         printf("Unknown statement type: %s\n", statement_type->valuestring);
@@ -118,7 +127,6 @@ Statement parse_statement(const char *filename) {
 
     cJSON_Delete(json);
     free(data);
-    return stmt;
 }
 
 int cli() {
@@ -171,7 +179,8 @@ int cli() {
             pclose(fp);
         
             // Initialize Statement struct from output.json
-            Statement stmt = parse_statement("./src/output.json");
+            Statement stmt;
+            parse_statement("./src/output.json", &stmt);
         
             // Test the parsed struct
             if (stmt.type == STATEMENT_INSERT) {
@@ -179,9 +188,37 @@ int cli() {
             } else if (stmt.type == STATEMENT_SELECT) {
                 printf("Parsed a SELECT statement!\n");
             }
+            free_statement(&stmt);
         }
     }
 }
+
+void free_statement(Statement *stmt) {
+    if (stmt->type == STATEMENT_INSERT) {
+        for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
+            free(stmt->insertStmt.columns[i]);
+        }
+        free(stmt->insertStmt.columns);
+        
+        for (int i = 0; i < stmt->insertStmt.num_values; i++) {
+            free(stmt->insertStmt.values[i].value);
+            free(stmt->insertStmt.values[i].valueType);
+        }
+        free(stmt->insertStmt.values);
+        
+        free(stmt->insertStmt.table);
+    } else if (stmt->type == STATEMENT_SELECT) {
+        for (int i = 0; i < stmt->selectStmt.num_columns; i++) {
+            free(stmt->selectStmt.columns[i]);
+        }
+        free(stmt->selectStmt.columns);
+        free(stmt->selectStmt.table);
+        if (stmt->selectStmt.condition) {
+            free(stmt->selectStmt.condition);
+        }
+    }
+}
+
 
 int main() {
     return cli();
