@@ -117,3 +117,7 @@ dkms.conf
 .vscode/settings.json
 
 /.idea
+
+build/
+database/
+output/
