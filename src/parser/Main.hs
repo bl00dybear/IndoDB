@@ -299,8 +299,7 @@ main = do
     case parse (parseSQL <* eof) "" input of
         Left err -> do
             print err
-            -- comm
-            B.writeFile "./output.json" (encode Null)
+            B.writeFile "./src/output.json" (encode Null)
         Right ast -> do
             let jsonOutput = encode ast
-            B.writeFile "./output.json" jsonOutput
+            B.writeFile "./src/output.json" jsonOutput

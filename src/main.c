@@ -162,7 +162,7 @@ int cli() {
         
         if (strlen(input) > 0) {
             // Parse input through sql_parser
-            FILE *fp = popen("./parser/sql_parser", "w");
+            FILE *fp = popen("./src/parser/sql_parser", "w");
             if (fp == NULL) {
                 perror("Error opening pipe");
                 return 1;
@@ -171,7 +171,7 @@ int cli() {
             pclose(fp);
         
             // Initialize Statement struct from output.json
-            Statement stmt = parse_statement("./output.json");
+            Statement stmt = parse_statement("./src/output.json");
         
             // Test the parsed struct
             if (stmt.type == STATEMENT_INSERT) {
