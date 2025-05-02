@@ -1,8 +1,6 @@
 {
-  "columns": [
-    { "constraint": "PrimaryKey", "name": "val1", "type": "Int" },
-    { "constraint": "NotNull", "name": "val2", "type": "Int" }
-  ],
-  "statement": "CreateStmt",
-  "table": "my_table"
+  "columns": ["col1"],
+  "statement": "InsertStmt",
+  "table": "tabel",
+  "values": [{ "value": "val1", "valueType": "String" }]
 }

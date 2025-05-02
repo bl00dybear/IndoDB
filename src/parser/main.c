@@ -4,7 +4,7 @@
 
 #define MAX_INPUT_SIZE 1024
 
-int main() {
+void cli() {
     char input[MAX_INPUT_SIZE];
     char line[MAX_INPUT_SIZE];
     
@@ -52,5 +52,9 @@ int main() {
             pclose(fp);
         }
     }
+}
+
+int main() {
+    cli();
     return 0;
 }
