@@ -73,10 +73,33 @@ void display(Queue* queue) {
     printf("\n");
 }
 
-// Eliberarea memoriei cozii
-void free_queue(Queue* queue) {
-    while (!is_empty(queue)) {
-        pop(queue);
+int get_queue_size(Queue* queue) {
+    if (queue == NULL) {
+        return 0;
     }
+
+    int size = 0;
+    QueueNode* current = queue->front;
+
+    while (current != NULL) {
+        size++;
+        current = current->next;
+    }
+
+    return size;
+}
+
+void destroy_queue(Queue* queue) {
+    if (queue == NULL) {
+        return;
+    }
+
+    QueueNode* current = queue->front;
+    while (current != NULL) {
+        QueueNode* next = current->next;
+        free(current);
+        current = next;
+    }
+
     free(queue);
 }

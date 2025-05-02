@@ -181,7 +181,7 @@ int mainn(){
 
     free_page_queue = create_queue();
   
-    for(int i=1;i<=100000;i+=1){
+    for(int i=1;i<=10000;i+=1){
         push(free_page_queue,i);
     }
 

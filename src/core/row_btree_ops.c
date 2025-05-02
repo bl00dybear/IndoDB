@@ -297,6 +297,66 @@ void add_serialized_page(uint64_t page_num) {
     }
 }
 
+void serialize_free_page_queue(DBFile* db) {
+    if (!db || !free_page_queue) {
+        printf("Error: Invalid database or queue\n");
+        return;
+    }
+
+    size_t offset = sizeof(uint64_t); // Skip root page number
+    unsigned char* bitmap = calloc(PAGE_SIZE - offset, 1);
+
+    // Set all bits to 1 (marking all pages as free)
+    memset(bitmap, 0xFF, PAGE_SIZE - offset);
+
+    // Mark used pages (set bits to 0)
+    QueueNode* current = free_page_queue->front;
+    while (current != NULL) {
+        uint64_t page_num = current->data;
+        // Calculate byte and bit position
+        size_t byte_index = page_num / 8;
+        uint8_t bit_pos = page_num % 8;
+        // Set bit to 0 (page is used)
+        bitmap[byte_index] &= ~(1 << bit_pos);
+        current = current->next;
+    }
+
+    // Write bitmap to metadata page
+    memcpy((char*)db->data + offset, bitmap, PAGE_SIZE - offset);
+    free(bitmap);
+}
+
+
+void deserialize_free_page_queue(DBFile* db) {
+    if (!db || !db->data) {
+        printf("Error: Invalid database\n");
+        return;
+    }
+
+    size_t offset = sizeof(uint64_t); // Skip root page number
+    unsigned char* bitmap = (unsigned char*)((char*)db->data + offset);
+
+    // Create new queue
+    Queue* new_queue = create_queue();
+
+    // Read bitmap and reconstruct queue
+    for (uint64_t page_num = 1; page_num < (PAGE_SIZE - offset) * 8; page_num++) {
+        size_t byte_index = page_num / 8;
+        uint8_t bit_pos = page_num % 8;
+
+        // If bit is 1, page is free
+        if (bitmap[byte_index] & (1 << bit_pos)) {
+            push(new_queue, page_num);
+        }
+    }
+
+    // Replace old queue with new one
+    if (free_page_queue) {
+        destroy_queue(free_page_queue);
+    }
+    free_page_queue = new_queue;
+}
+
 // Improved serialize_node function
 void serialize_node(DBFile* db, RowNode* node) {
     if (node == NULL) return;
@@ -372,6 +432,7 @@ void serialize_btree(DBFile* db, RowNode* root) {
     memcpy(db->data, &root_page_num, sizeof(root_page_num));
     printf("Serializing root page number %lu to metadata\n", root_page_num);
 
+    serialize_free_page_queue(db);
     // Serialize the rest of the tree
     serialize_node(db, root);
     
@@ -459,6 +520,8 @@ RowNode* deserialize_btree(DBFile* db) {
     // Read root_page_num from page 0
     memcpy(&root_page_num, db->data, sizeof(root_page_num));
     printf("Deserialized root from page %lu\n", root_page_num);
+
+    deserialize_free_page_queue(db);
 
     // Check if root_page_num is valid
     if (root_page_num == 0 || root_page_num * PAGE_SIZE >= db->size) {
