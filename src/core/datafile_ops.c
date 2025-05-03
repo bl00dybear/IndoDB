@@ -221,22 +221,56 @@ void serialize_int(Statement *stmt,void*row_content,uint64_t *row_index,uint64_t
     free(row_content_int);
 }
 
+void serialize_string(Statement *stmt,void*row_content,uint64_t *row_index,uint64_t index) {
+    uint32_t string_length = strlen(stmt->insertStmt.values[index].value); // lenght in bytes of str lenght is 4 bytes
+
+    void* string_lenght_int = malloc(sizeof(uint32_t));
+    *(uint32_t*)string_lenght_int = string_length;
+    memcpy(row_content + (*row_index), string_lenght_int, sizeof(uint32_t));
+
+    *row_index += sizeof(uint32_t);
+
+    void* string_content = malloc(string_length);
+    memcpy(string_content, stmt->insertStmt.values[index].value, string_length);
+    memcpy(row_content + (*row_index), string_content, string_length);
+
+    *row_index += string_length;
+
+    free(string_lenght_int);
+    free(string_content);
+}
+
+void set_row_flag(void* row_content,bool flag) {
+    memccpy(row_content+8 , &flag, sizeof(bool), 1);
+}
+
+void set_row_size(void* row_content,uint64_t size) {
+    memcpy(row_content, &size, sizeof(uint64_t));
+}
+
 
 void* get_row_content(Statement *stmt, uint64_t *row_index) {
     void *row_content = malloc(MAX_BUFFER_SIZE);
 
+    set_row_flag(row_content,true);
+
     uint64_t index = 0;
 
+    *row_index += 9;
+
     while (stmt->insertStmt.values[index].value != NULL) {
+        printf("%ld\n", index);
         if (strcmp(stmt->insertStmt.values[index].valueType,"Int") == 0) {
             serialize_int(stmt,row_content,row_index,index);
         }
         else if (strcmp(stmt->insertStmt.values[index].valueType,"String") == 0) {
-         // TODO : serialize string
+            // printf("%ld\n",strlen(stmt->insertStmt.values[index].value));
+            serialize_string(stmt,row_content,row_index,index);
         }
         index+=1;
     }
 
+    set_row_size(row_content,*row_index);
 
     return row_content;
 }

@@ -24,15 +24,28 @@ void parse_statement(const char *filename, Statement *stmt) {
     data[length] = '\0';
     fclose(fp);
 
+    printf("A ajuns in parse statement\n\n");
+
+
     cJSON *json = cJSON_Parse(data);
     if (!json) {
         printf("Error parsing JSON\n");
         exit(1);
     }
 
+    printf("aici1\n\n");
+
     cJSON *statement_type = cJSON_GetObjectItemCaseSensitive(json, "statement");
+
+    printf("aici2\n\n");
+
     if (strcmp(statement_type->valuestring, "InsertStmt") == 0) {
+
+        printf("aici3\n\n");
+
         stmt->type = STATEMENT_INSERT;
+
+        printf("aici4\n\n");
 
         cJSON *columns = cJSON_GetObjectItemCaseSensitive(json, "columns");
         cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
@@ -129,7 +142,7 @@ void free_statement(Statement *stmt) {
 }
 
 
-void free_memory(const Statement* stmt) {
+void free_memory(Statement* stmt) {
     free_statement(stmt);
 
     // Free Btree
@@ -183,22 +196,22 @@ void process_statement(Statement *stmt) {
 int cli() {
     char input[MAX_INPUT_SIZE];
     char line[MAX_INPUT_SIZE];
+    printf("Welcome to IndoDB!\n");
 
-    // Clear screen before displaying prompt
-    printf("\033[H\033[J");
+    // printf("\033[H\033[J");
 
     while (1) {
-        printf("IndoDB> ");
+        printf("indodb$ ");
         input[0] = '\0';
 
         while (fgets(line, sizeof(line), stdin)) {
+            printf("A luat input\n\n");
             size_t len = strlen(line);
             if (len > 0 && line[len - 1] == '\n') {
                 line[len - 1] = '\0';
                 len--;
             }
 
-            // Exit CLI command
             if (strcmp(line, "EXIT;") == 0) {
                 printf("Exiting IndoDB...\n");
                 return 0;
@@ -207,7 +220,6 @@ int cli() {
             strcat(input, line);
             strcat(input, " ");
 
-            // Check if the last non-space character is ';'
             char *trimmed = input + strlen(input) - 1;
             while (trimmed >= input && *trimmed == ' ') {
                 trimmed--;
@@ -216,8 +228,10 @@ int cli() {
                 break;
             }
 
-            printf("      > ");
+            printf("      $ ");
         }
+
+        printf("Aiurea moment\n\n");
 
         if (strlen(input) > 0) {
             FILE *fp = popen("../output/sql_parser", "w");
@@ -228,17 +242,26 @@ int cli() {
             fprintf(fp, "%s\n", input);
             pclose(fp);
 
-            Statement *stmt;
+            printf("A parsat la haskell\n\n");
+
+            Statement *stmt ;
             parse_statement("../output/output.json",stmt);
 
-            process_statement(stmt);
-            // Test the parsed struct
-            if (stmt->type == STATEMENT_INSERT) {
-                printf("Parsed an INSERT statement!\n");
-            } else if (stmt->type == STATEMENT_SELECT) {
-                printf("Parsed a SELECT statement!\n");
+            printf("A parsat la C\n\n");
+
+            if (stmt != NULL) {
+                process_statement(stmt);
+                if (stmt->type == STATEMENT_INSERT) {
+                    printf("Parsed an INSERT statement!\n");
+                } else if (stmt->type == STATEMENT_SELECT) {
+                    printf("Parsed a SELECT statement!\n");
+                }
+                free_statement(stmt);
+            }else {
+                printf("Failed to parse statement!\n");
+                exit(EXIT_FAILURE);
             }
-            free_statement(&stmt);
+
         }
     }
 }
