@@ -268,6 +268,18 @@ int cli() {
     }
 }
 
+void database_load() {
+    root = load_btree_from_disk(db);
+    printf("%ld\n", root->page_num);
+    if (root) {
+        printf("B-Tree successfully loaded!\n");
+    } else {
+        printf("Failed to load B-Tree.\n");
+    }
+
+    load_datafile(df);
+}
+
 void database_init() {
     if(!((db = malloc(sizeof(DBFile))))){
         perror("Memory allocation failed");
@@ -326,12 +338,26 @@ void database_init() {
     }
 }
 
+bool is_database_empty() {
+    typedef struct {
+        uint64_t write_ptr_offset;
+        uint64_t magic;
+    } DataFileHeader;
 
+    DataFileHeader header;
+    memcpy(&header, df->start_ptr, sizeof(header));
 
+    return header.magic != MAGIC_NUMBER;
+}
 
 
 int main() {
     database_init();
+
+    if (!is_database_empty()) {
+        printf("Database is not empty!\n");
+        database_load();
+    }
 
     return cli();
 }
