@@ -57,6 +57,8 @@ void parse_statement(const char *filename, Statement *stmt) {
         stmt->insertStmt.num_columns = num_columns;
         stmt->insertStmt.num_values = num_values;
 
+        printf("aici5\n\n");
+
         stmt->insertStmt.columns = malloc(num_columns * sizeof(char*));
         for (int i = 0; i < num_columns; i++) {
             cJSON *col = cJSON_GetArrayItem(columns, i);
