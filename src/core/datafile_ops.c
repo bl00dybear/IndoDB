@@ -1,5 +1,6 @@
 #include "../../include/core/datafile_ops.h"
 #include "../../include/data/parser_structures.h"
+#include "../../include/utils/globals.h"
 
 void allocate_new_block(DataFile *df) {
     const size_t new_size = df->size + BLOCK_SIZE;
@@ -273,4 +274,16 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
     set_row_size(row_content,*row_index);
 
     return row_content;
+}
+
+void print_entire_table(RowNode *node, DataFile *df) {
+    if (node == NULL) {
+        printf("Node is NULL\n");
+        return;
+    }
+
+    for (int i=0; i<node->num_keys; i+=1) {
+        uint64_t offset = node->raw_data[i] - df->start_ptr;
+        printf("Offset: %ld\n", offset);
+    }
 }

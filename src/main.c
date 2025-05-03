@@ -189,7 +189,15 @@ void process_statement(Statement *stmt) {
             commit_changes_db(db);
             commit_changes_df(df);
         }
-        case STATEMENT_SELECT: {}
+        case STATEMENT_SELECT: {
+            if (!strcmp(stmt -> selectStmt.columns[0],"*")) {
+                // printf("Selecting all columns\n");
+                traversal(root);
+                print_entire_table(root,df);
+            }else {
+             // TODO : select specified columns
+            }
+        }
         default: ;
     }
 }
