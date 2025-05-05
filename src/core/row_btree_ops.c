@@ -341,6 +341,11 @@ void deserialize_metadata(DBFile* db, MetadataPage* metadata) {
             push(free_page_queue, page_num);
         }
     }
+    global_id= metadata->last_table_id;
+    if(metadata->magic != MAGIC_NUMBER) {
+        printf("Error: corrupted database\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void serialize_free_page_queue(DBFile* db) {
@@ -475,6 +480,8 @@ void serialize_btree(DBFile* db, RowNode* root, MetadataPage* metadata) {
 
     // Save the root page number in metadata (page 0)
     metadata->root_page_num = root->page_num;
+    metadata->last_table_id = global_id;
+    metadata->magic = MAGIC_NUMBER;
     // Serialize the rest of the tree
     serialize_node(db, root);
     serialize_metadata(db, metadata);
