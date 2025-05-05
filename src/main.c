@@ -166,14 +166,20 @@ void process_statement(Statement *stmt) {
             char* row_content = get_row_content(stmt,&row_size);
             printf("Row content: %ld\n",row_size);
             void *written_address = write_row(df, row_content, row_size);
+            
+
+
             const uint64_t current_id = global_id++;
             insert(current_id,written_address);
             set_file_dirty_db(db, true);
             set_file_dirty_df(df,true);
-
-
-            commit_changes_db(db);
+            
+            traversal(root);
+            
+            commit_changes_db(db,metadata);
             commit_changes_df(df);
+
+            break;
         }
         case STATEMENT_SELECT: {
             if (!strcmp(stmt -> selectStmt.columns[0],"*")) {
@@ -183,8 +189,9 @@ void process_statement(Statement *stmt) {
             }else {
              // TODO : select specified columns
             }
+            break;
         }
-        default: ;
+        default: break;
     }
 }
 

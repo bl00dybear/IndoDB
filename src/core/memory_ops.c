@@ -112,13 +112,13 @@ void write_on_memory_block(DBFile *db, void* new_data, uint64_t page_num){
     db->dirty = 1;
 }
 
-void commit_changes_db(DBFile *db) {
+void commit_changes_db(DBFile *db, MetadataPage* metadata) {
     if (!db->dirty) {
         printf("No changes to commit.\n");
         return;
     }
 
-    serialize_btree(db, root);
+    serialize_btree(db, root,metadata);
 
     if (msync(db->data, db->size, MS_SYNC) == -1) {
         perror("Error committing changes to disk");
