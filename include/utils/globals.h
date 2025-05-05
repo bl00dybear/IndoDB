@@ -11,6 +11,7 @@ extern uint64_t serialized_pages[MAX_VISITED_NODES];
 extern int serialized_count;
 extern DBFile* db;
 extern DataFile* df;
+extern MetadataPage* metadata;
 extern uint64_t global_id;
 
 #endif

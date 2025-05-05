@@ -96,7 +96,7 @@ void create_memory_block(DBFile* db) {
     db->size = new_size;
 }
 
-void write_on_memory_block(DBFile *db, void* new_data, u_int64_t page_num){
+void write_on_memory_block(DBFile *db, void* new_data, uint64_t page_num){
     printf("%d\n", db->free_blocks);
 
     while ((page_num+1)*PAGE_SIZE>db->size) {
