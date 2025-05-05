@@ -46,7 +46,7 @@ void memory_map_db_file(DBFile* db){
 void memory_map_df_file(DataFile* df){
     df->write_ptr = mmap(NULL, df->size, PROT_READ | PROT_WRITE, MAP_SHARED, df->fd, 0);
     df->start_ptr = df->write_ptr;
-    df->write_ptr = (char*)df->write_ptr + BLOCK_SIZE/16;
+    df->write_ptr = BLOCK_SIZE/16;
 
     if (df->write_ptr == MAP_FAILED) {
         perror("Error mapping database file");
@@ -112,13 +112,13 @@ void write_on_memory_block(DBFile *db, void* new_data, uint64_t page_num){
     db->dirty = 1;
 }
 
-void commit_changes_db(DBFile *db) {
+void commit_changes_db(DBFile *db, MetadataPage* metadata) {
     if (!db->dirty) {
         printf("No changes to commit.\n");
         return;
     }
 
-    serialize_btree(db, root);
+    serialize_btree(db, root, metadata);
 
     if (msync(db->data, db->size, MS_SYNC) == -1) {
         perror("Error committing changes to disk");

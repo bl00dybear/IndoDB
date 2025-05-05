@@ -16,6 +16,6 @@ void init_create_db_memory_block(DBFile* db);
 void init_create_df_memory_block(DataFile* df);
 void create_memory_block(DBFile* db);
 void write_on_memory_block(DBFile *db, void* new_data, uint64_t page_num);
-void commit_changes_db(DBFile *db);
+void commit_changes_db(DBFile *db, MetadataPage* metadata);
 
 #endif

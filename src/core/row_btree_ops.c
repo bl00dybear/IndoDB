@@ -475,9 +475,9 @@ void serialize_btree(DBFile* db, RowNode* root, MetadataPage* metadata) {
 
     // Save the root page number in metadata (page 0)
     metadata->root_page_num = root->page_num;
-    serialize_metadata(db, metadata);
     // Serialize the rest of the tree
     serialize_node(db, root);
+    serialize_metadata(db, metadata);
     
     printf("Serialization complete. Total nodes serialized: %d\n", serialized_count);
 }
