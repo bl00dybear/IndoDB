@@ -70,7 +70,7 @@ parseVarChar = lexeme $ do
     size <- between (char '(') (char ')') (read <$> many1 digit)
     if size > 0 && size <= 255
         then return (VarCharType size)
-        else fail "VARCHAR size must be between 1 and 255"
+        else fail "Error: VARCHAR size must be between 1 and 255"
 
 parseColumn :: Parser (String, DataType, Maybe ConstraintType)
 parseColumn = lexeme $ do

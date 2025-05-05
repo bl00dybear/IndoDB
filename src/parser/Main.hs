@@ -18,7 +18,7 @@ main = do
                 custom = [s | Message s <- msgs]
                 errMsg = if not (null custom)
                          then head custom
-                         else "Invalid SQL Statement"
+                         else "Error: Invalid SQL Statement"
                 jsonErr = object ["error" .= errMsg]
             B.writeFile "../output/output.json" (encode jsonErr)
         Right ast -> do
