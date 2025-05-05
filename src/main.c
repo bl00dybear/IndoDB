@@ -353,6 +353,16 @@ void process_statement(Statement *stmt) {
 
             break;
         }
+        case STATEMENT_CREATE: {
+            
+            set_table_parameters(metadata, stmt);
+            serialize_metadata(db, metadata);
+            
+
+            // TODO : create metadata
+            // TODO : create btree
+            break;
+        }
         // TODO : create table and drop table
         default: break;
     }
@@ -577,7 +587,7 @@ void database_init() {
 
     free_page_queue = create_queue();
 
-    for(int i=1;i<=10000;i+=1){
+    for(int i=1;i<=21792;i+=1){
         push(free_page_queue,i);
     }
 }

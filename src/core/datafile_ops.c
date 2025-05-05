@@ -348,3 +348,41 @@ void print_entire_table(RowNode *node, DataFile *df) {
         printf("Offset: %x\n", offset);
     }
 }
+
+
+void set_table_parameters(MetadataPage *metadata, Statement *stmt) {    
+    metadata->last_table_id = global_id;
+    metadata->magic = MAGIC_NUMBER;
+    metadata->num_columns = stmt->createStmt.num_columns;
+    strcpy(metadata->table_name, stmt->createStmt.table);
+    for (int i = 0; i < stmt->createStmt.num_columns; i++) {
+        strcpy(metadata->column_names[i], stmt->createStmt.columns[i].column_name);
+        metadata->column_sizes[i] = stmt->createStmt.columns[i].length;
+        if (strcasecmp(stmt->createStmt.columns[i].type, "Int") == 0) {
+            metadata->column_types[i] = TYPE_INT;
+            metadata->column_sizes[i] = sizeof(int);
+        } 
+        else if (strcasecmp(stmt->createStmt.columns[i].type, "float") == 0) {
+            metadata->column_types[i] = TYPE_FLOAT;
+            metadata->column_sizes[i] = sizeof(float);
+        } 
+        else if (strncasecmp(stmt->createStmt.columns[i].type, "String", 7) == 0) {
+            metadata->column_types[i] = TYPE_VARCHAR;
+            // Pentru VARCHAR, dimensiunea este specificată în createStmt->columns[i].length
+            metadata->column_sizes[i] = stmt->createStmt.columns[i].length;
+        } 
+        else if (strcasecmp(stmt->createStmt.columns[i].type, "timestamp") == 0) {
+            metadata->column_types[i] = TYPE_TIMESTAMP;
+            metadata->column_sizes[i] = sizeof(uint64_t); // Timestamp stocat ca un întreg pe 64 de biți
+        } 
+        else {
+            // Tip necunoscut, setează implicit la INT
+            printf("Warning: Unknown type '%s' for column '%s', defaulting to INT\n", 
+                stmt->createStmt.columns[i].type, stmt->createStmt.columns[i].column_name);
+            metadata->column_types[i] = TYPE_INT;
+            metadata->column_sizes[i] = sizeof(int);
+        }
+    }
+
+    
+} 
