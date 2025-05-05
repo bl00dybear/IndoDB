@@ -4,7 +4,16 @@
 typedef enum {
     STATEMENT_INSERT,
     STATEMENT_SELECT,
+    STATEMENT_CREATE,
+    STATEMENT_DROP,
 } StatementType;
+
+typedef enum {
+    CONSTRAINT_NONE,
+    CONSTRAINT_PRIMARY_KEY,
+    CONSTRAINT_FOREIGN_KEY,
+    CONSTRAINT_NOT_NULL,
+} ConstraintType;
 
 typedef struct {
     char **columns;
@@ -25,10 +34,22 @@ typedef struct {
 } SelectStmtStruct;
 
 typedef struct {
+    struct {
+        char *column_name;
+        ConstraintType constraint;
+        char *type;
+        int length;
+    } *columns;
+    int num_columns;
+    char *table;
+} CreateStmtStruct;
+
+typedef struct {
     StatementType type;
     union {
         InsertStmtStruct insertStmt;
         SelectStmtStruct selectStmt;
+        CreateStmtStruct createStmt;
     };
 } Statement;
 

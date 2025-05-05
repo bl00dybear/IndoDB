@@ -258,7 +258,70 @@ int parse_statement(const char *filename, Statement *stmt) {
         } else {
             stmt->selectStmt.condition = strdup(condition->valuestring);
         }
-    } else {
+    } else if(strcmp(statement_type->valuestring, "CreateStmt") == 0) {
+        stmt->type = STATEMENT_CREATE;
+
+        cJSON *columns = cJSON_GetObjectItemCaseSensitive(json, "columns");
+        cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
+        int num_columns = cJSON_GetArraySize(columns);
+
+        stmt->createStmt.num_columns = num_columns;
+        stmt->createStmt.table = strdup(table->valuestring);
+
+
+        stmt->createStmt.columns = malloc(num_columns * sizeof(*stmt->createStmt.columns));
+        for(int i = 0; i < num_columns; i++) {
+            cJSON *col_obj = cJSON_GetArrayItem(columns, i);
+            if(!col_obj) {
+                printf("Error: Column object is NULL\n");
+                continue;
+            }
+            cJSON *col_name = cJSON_GetObjectItemCaseSensitive(col_obj, "name");
+            stmt->createStmt.columns[i].column_name = strdup(col_name->valuestring);
+
+            cJSON *col_constraint = cJSON_GetObjectItemCaseSensitive(col_obj, "constraint");
+            if (cJSON_IsString(col_constraint)) {
+                if (strcmp(col_constraint->valuestring, "PrimaryKey") == 0) {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_PRIMARY_KEY;
+                } else if (strcmp(col_constraint->valuestring, "ForeignKey") == 0) {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_FOREIGN_KEY;
+                } else if (strcmp(col_constraint->valuestring, "NotNull") == 0) {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_NOT_NULL;
+                } else {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_NONE;
+                }
+            } else {
+                stmt->createStmt.columns[i].constraint = CONSTRAINT_NONE;
+            }
+
+            cJSON *col_type_obj = cJSON_GetObjectItemCaseSensitive(col_obj, "type");
+            // check if type is object
+            if(!cJSON_IsObject(col_type_obj)) {
+                stmt->createStmt.columns[i].type = strdup(col_type_obj->valuestring);
+
+                // also length set to -1
+                stmt->createStmt.columns[i].length = -1;
+            } else{
+                cJSON *col_type = cJSON_GetObjectItemCaseSensitive(col_type_obj, "type");
+                if (cJSON_IsString(col_type)) {
+                    stmt->createStmt.columns[i].type = strdup(col_type->valuestring);
+                } else {
+                    printf("Error: Column type is not a string\n");
+                    stmt->createStmt.columns[i].type = NULL;
+                }
+
+                cJSON *col_type_length = cJSON_GetObjectItemCaseSensitive(col_type_obj, "length");
+                if (cJSON_IsNumber(col_type_length)) {
+                    stmt->createStmt.columns[i].length = col_type_length->valueint;
+                } else {
+                    printf("Error: Column length is not a number\n");
+                    stmt->createStmt.columns[i].length = -1; // default value
+                }
+            }
+        
+        }
+     }
+    else {
         printf("Unknown statement type: %s\n", statement_type->valuestring);
         return 1;
     }
@@ -387,6 +450,20 @@ int cli() {
                 } else {
                     printf("No condition\n");
                 }
+            } else if (stmt->type == STATEMENT_CREATE) {
+                printf("CREATE table: %s\n", stmt->createStmt.table);
+                for (int i = 0; i < stmt->createStmt.num_columns; i++) {
+                    printf("Column: %s, Type: %s, Constraint: %d",
+                        stmt->createStmt.columns[i].column_name,
+                        stmt->createStmt.columns[i].type,
+                        stmt->createStmt.columns[i].constraint);
+                    if (stmt->createStmt.columns[i].length != -1) {
+                        printf(", Length: %d", stmt->createStmt.columns[i].length);
+                    }
+                    printf("\n");
+                }
+            } else {
+                printf("Unknown statement type!\n");
             }
 
             if (stmt != NULL) {
