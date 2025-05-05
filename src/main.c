@@ -320,11 +320,16 @@ int parse_statement(const char *filename, Statement *stmt) {
             }
         
         }
-     }
-    else {
+     } else if(strcmp(statement_type->valuestring, "DropStmt") == 0) {
+        stmt->type = STATEMENT_DROP;
+
+        cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
+        stmt->dropStmt.table = strdup(table->valuestring);
+     } else {
         printf("Unknown statement type: %s\n", statement_type->valuestring);
         return 1;
     }
+    
 
     cJSON_Delete(json);
     free(data);
@@ -356,6 +361,7 @@ void process_statement(Statement *stmt) {
              // TODO : select specified columns
             }
         }
+        // TODO : create table and drop table
         default: ;
     }
 }
@@ -462,6 +468,8 @@ int cli() {
                     }
                     printf("\n");
                 }
+            } else if (stmt->type == STATEMENT_DROP) {
+                printf("DROP table: %s\n", stmt->dropStmt.table);
             } else {
                 printf("Unknown statement type!\n");
             }

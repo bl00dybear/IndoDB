@@ -45,11 +45,16 @@ typedef struct {
 } CreateStmtStruct;
 
 typedef struct {
+    char *table;
+} DropStmtStruct;
+
+typedef struct {
     StatementType type;
     union {
         InsertStmtStruct insertStmt;
         SelectStmtStruct selectStmt;
         CreateStmtStruct createStmt;
+        DropStmtStruct dropStmt;
     };
 } Statement;
 
