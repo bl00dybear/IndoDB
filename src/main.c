@@ -35,7 +35,7 @@ void free_statement(Statement *stmt) {
     }
 }
 
-void parse_statement(const char *filename, Statement *stmt) {
+int parse_statement(const char *filename, Statement *stmt) {
     // Este deschis fisierul output.json
     FILE *fp = fopen(filename, "r");
     // Error Handling
@@ -66,7 +66,7 @@ void parse_statement(const char *filename, Statement *stmt) {
     // Error Handling
     if (!json) {
         printf("Error parsing JSON\n");
-        exit(1);
+        return 1; 
     }
 
     // check for errors
@@ -76,7 +76,7 @@ void parse_statement(const char *filename, Statement *stmt) {
         printf("%s\n", error_ptr->valuestring);
         cJSON_Delete(json);
         free(data);
-        return;
+        return -1;
     }
 
     // Selectam ce tip de statement este
@@ -162,11 +162,12 @@ void parse_statement(const char *filename, Statement *stmt) {
         }
     } else {
         printf("Unknown statement type: %s\n", statement_type->valuestring);
-        exit(1);
+        return 1;
     }
 
     cJSON_Delete(json);
     free(data);
+    return 0;
 }
 
 void process_statement(Statement *stmt) {
@@ -262,7 +263,11 @@ int cli() {
                 perror("malloc failed");
                 exit(1);
             }
-            parse_statement("../output/output.json", stmt);
+            int res = parse_statement("../output/output.json", stmt);
+            if(res == -1){
+                free_statement(stmt);
+                continue;
+            }
 
             // TESTEAZA AICI
             // TESTEAZA AICI
@@ -287,7 +292,6 @@ int cli() {
                     printf("No condition\n");
                 }
             }
-
 
             if (stmt != NULL) {
                 process_statement(stmt);
