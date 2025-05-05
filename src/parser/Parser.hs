@@ -38,7 +38,7 @@ parseInsert = lexeme $ do
 
     case cols of
         Just colList | length colList /= length values ->
-            fail "Syntax error: Number of columns does not match number of values."
+            fail "Error: Number of columns does not match number of values."
         _ -> return $ InsertStmt table cols  values
 
 parseUpdate :: Parser SQLStatement

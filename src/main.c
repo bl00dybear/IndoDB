@@ -9,6 +9,104 @@
 #include "../include/utils/globals.h"
 #include "../include/utils/queue.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <unistd.h>
+#include <string.h>
+
+#define MAX_INPUT_SIZE 1024
+#define MAX_HISTORY 100
+
+static struct termios orig_termios;
+static char *history[MAX_HISTORY];
+static int hist_len = 0;
+
+void disable_raw_mode() {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
+void enable_raw_mode() {
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disable_raw_mode);
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON | ISIG);
+    raw.c_iflag &= ~(IXON | ICRNL);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+int read_line(char *buf, size_t size) {
+    int len = 0, pos = 0, hist_pos = hist_len;
+    char c;
+    enable_raw_mode();
+    while (1) {
+        if (read(STDIN_FILENO, &c, 1) != 1) {
+            disable_raw_mode();
+            return 0; // EOF
+        }
+        if (c == '\r' || c == '\n') {
+            write(STDOUT_FILENO, "\r\n", 2);
+            buf[len] = '\0';
+            if (len > 0 && hist_len < MAX_HISTORY) {
+                history[hist_len++] = strdup(buf);
+            }
+            disable_raw_mode();
+            return 1;
+        } else if (c == 127) {
+            if (pos > 0) {
+                memmove(buf + pos - 1, buf + pos, len - pos);
+                len--; pos--;
+                write(STDOUT_FILENO, "\x1b[D", 3);
+                write(STDOUT_FILENO, buf + pos, len - pos);
+                write(STDOUT_FILENO, " ", 1);
+                for (int i = 0; i <= len - pos; i++) write(STDOUT_FILENO, "\x1b[D", 3);
+            }
+        } else if (c == '\x1b') {
+            char seq[2];
+            if (read(STDIN_FILENO, &seq[0], 1) != 1) continue;
+            if (read(STDIN_FILENO, &seq[1], 1) != 1) continue;
+            if (seq[0] == '[') {
+                if (seq[1] == 'C' && pos < len) { write(STDOUT_FILENO, "\x1b[C", 3); pos++; }
+                else if (seq[1] == 'D' && pos > 0) { write(STDOUT_FILENO, "\x1b[D", 3); pos--; }
+                else if (seq[1] == 'A' && hist_pos > 0) {
+                    hist_pos--;
+                    // clear line
+                    while (pos--) write(STDOUT_FILENO, "\x1b[D", 3);
+                    for (int i = 0; i < len; i++) write(STDOUT_FILENO, " ", 1);
+                    for (int i = 0; i < len; i++) write(STDOUT_FILENO, "\x1b[D", 3);
+                    const char *h = history[hist_pos];
+                    len = pos = strlen(h);
+                    strcpy(buf, h);
+                    write(STDOUT_FILENO, buf, len);
+                } else if (seq[1] == 'B' && hist_pos < hist_len) {
+                    hist_pos++;
+                    // clear line
+                    while (pos--) write(STDOUT_FILENO, "\x1b[D", 3);
+                    for (int i = 0; i < len; i++) write(STDOUT_FILENO, " ", 1);
+                    for (int i = 0; i < len; i++) write(STDOUT_FILENO, "\x1b[D", 3);
+                    if (hist_pos < hist_len) {
+                        const char *h = history[hist_pos];
+                        len = pos = strlen(h);
+                        strcpy(buf, h);
+                        write(STDOUT_FILENO, buf, len);
+                    } else {
+                        len = pos = 0;
+                        buf[0] = '\0';
+                    }
+                }
+            }
+        } else if (c >= 32 && c <= 126) {
+            if (len < (int)size - 1) {
+                memmove(buf + pos + 1, buf + pos, len - pos);
+                buf[pos] = c;
+                write(STDOUT_FILENO, buf + pos, len - pos + 1);
+                len++; pos++;
+                for (int i = 0; i < len - pos; i++) write(STDOUT_FILENO, "\x1b[D", 3);
+            }
+        }
+    }
+}
+
 void free_statement(Statement *stmt) {
     if (stmt->type == STATEMENT_INSERT) {
         for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
@@ -35,7 +133,7 @@ void free_statement(Statement *stmt) {
     }
 }
 
-void parse_statement(const char *filename, Statement *stmt) {
+int parse_statement(const char *filename, Statement *stmt) {
     // Este deschis fisierul output.json
     FILE *fp = fopen(filename, "r");
     // Error Handling
@@ -66,7 +164,17 @@ void parse_statement(const char *filename, Statement *stmt) {
     // Error Handling
     if (!json) {
         printf("Error parsing JSON\n");
-        exit(1);
+        return 1; 
+    }
+
+    // check for errors
+    cJSON *error_ptr = cJSON_GetObjectItemCaseSensitive(json, "error");
+    if(error_ptr) {
+        // gracefully display the error
+        printf("%s\n", error_ptr->valuestring);
+        cJSON_Delete(json);
+        free(data);
+        return -1;
     }
 
     // Selectam ce tip de statement este
@@ -150,13 +258,82 @@ void parse_statement(const char *filename, Statement *stmt) {
         } else {
             stmt->selectStmt.condition = strdup(condition->valuestring);
         }
-    } else {
+    } else if(strcmp(statement_type->valuestring, "CreateStmt") == 0) {
+        stmt->type = STATEMENT_CREATE;
+
+        cJSON *columns = cJSON_GetObjectItemCaseSensitive(json, "columns");
+        cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
+        int num_columns = cJSON_GetArraySize(columns);
+
+        stmt->createStmt.num_columns = num_columns;
+        stmt->createStmt.table = strdup(table->valuestring);
+
+
+        stmt->createStmt.columns = malloc(num_columns * sizeof(*stmt->createStmt.columns));
+        for(int i = 0; i < num_columns; i++) {
+            cJSON *col_obj = cJSON_GetArrayItem(columns, i);
+            if(!col_obj) {
+                printf("Error: Column object is NULL\n");
+                continue;
+            }
+            cJSON *col_name = cJSON_GetObjectItemCaseSensitive(col_obj, "name");
+            stmt->createStmt.columns[i].column_name = strdup(col_name->valuestring);
+
+            cJSON *col_constraint = cJSON_GetObjectItemCaseSensitive(col_obj, "constraint");
+            if (cJSON_IsString(col_constraint)) {
+                if (strcmp(col_constraint->valuestring, "PrimaryKey") == 0) {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_PRIMARY_KEY;
+                } else if (strcmp(col_constraint->valuestring, "ForeignKey") == 0) {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_FOREIGN_KEY;
+                } else if (strcmp(col_constraint->valuestring, "NotNull") == 0) {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_NOT_NULL;
+                } else {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_NONE;
+                }
+            } else {
+                stmt->createStmt.columns[i].constraint = CONSTRAINT_NONE;
+            }
+
+            cJSON *col_type_obj = cJSON_GetObjectItemCaseSensitive(col_obj, "type");
+            // check if type is object
+            if(!cJSON_IsObject(col_type_obj)) {
+                stmt->createStmt.columns[i].type = strdup(col_type_obj->valuestring);
+
+                // also length set to -1
+                stmt->createStmt.columns[i].length = -1;
+            } else{
+                cJSON *col_type = cJSON_GetObjectItemCaseSensitive(col_type_obj, "type");
+                if (cJSON_IsString(col_type)) {
+                    stmt->createStmt.columns[i].type = strdup(col_type->valuestring);
+                } else {
+                    printf("Error: Column type is not a string\n");
+                    stmt->createStmt.columns[i].type = NULL;
+                }
+
+                cJSON *col_type_length = cJSON_GetObjectItemCaseSensitive(col_type_obj, "length");
+                if (cJSON_IsNumber(col_type_length)) {
+                    stmt->createStmt.columns[i].length = col_type_length->valueint;
+                } else {
+                    printf("Error: Column length is not a number\n");
+                    stmt->createStmt.columns[i].length = -1; // default value
+                }
+            }
+        
+        }
+     } else if(strcmp(statement_type->valuestring, "DropStmt") == 0) {
+        stmt->type = STATEMENT_DROP;
+
+        cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
+        stmt->dropStmt.table = strdup(table->valuestring);
+     } else {
         printf("Unknown statement type: %s\n", statement_type->valuestring);
-        exit(1);
+        return 1;
     }
+    
 
     cJSON_Delete(json);
     free(data);
+    return 0;
 }
 
 void process_statement(Statement *stmt) {
@@ -188,9 +365,8 @@ void process_statement(Statement *stmt) {
 
             break;
         }
-        default: 
-            printf("Unknown statement type\n");
-            break;
+        // TODO : create table and drop table
+        default: break;
     }
 }
 
@@ -202,19 +378,26 @@ int cli() {
 
     while (1) {
         printf("IndoDB> ");
+        fflush(stdout);
         input[0] = '\0';
 
-        while (fgets(line, sizeof(line), stdin)) {
-            // printf("A luat input\n\n");
+        while (read_line(line, sizeof(line))) {
             size_t len = strlen(line);
             if (len > 0 && line[len - 1] == '\n') {
-                line[len - 1] = '\0';
-                len--;
+                line[len - 1] = '\0'; len--;
             }
 
             if (strcmp(line, "EXIT;") == 0) {
                 printf("Exiting IndoDB...\n");
+                fflush(stdout);
                 return 0;
+            }
+
+            if (strcmp(line, "CLEAR;") == 0) {
+                printf("\033[H\033[J");
+                printf("IndoDB> ");
+                fflush(stdout);
+                continue;
             }
 
             if (strlen(input) + strlen(line) + 2 < MAX_INPUT_SIZE) {
@@ -226,14 +409,11 @@ int cli() {
             }
 
             char *trimmed = input + strlen(input) - 1;
-            while (trimmed >= input && *trimmed == ' ') {
-                trimmed--;
-            }
-            if (*trimmed == ';') {
-                break;
-            }
+            while (trimmed >= input && *trimmed == ' ') trimmed--;
+            if (*trimmed == ';') break;
 
             printf("     -> ");
+            fflush(stdout);
         }
 
 
@@ -252,7 +432,11 @@ int cli() {
                 perror("malloc failed");
                 exit(1);
             }
-            parse_statement("../output/output.json", stmt);
+            int res = parse_statement("../output/output.json", stmt);
+            if(res == -1){
+                free_statement(stmt);
+                continue;
+            }
 
             // TESTEAZA AICI
             // TESTEAZA AICI
@@ -276,8 +460,23 @@ int cli() {
                 } else {
                     printf("No condition\n");
                 }
+            } else if (stmt->type == STATEMENT_CREATE) {
+                printf("CREATE table: %s\n", stmt->createStmt.table);
+                for (int i = 0; i < stmt->createStmt.num_columns; i++) {
+                    printf("Column: %s, Type: %s, Constraint: %d",
+                        stmt->createStmt.columns[i].column_name,
+                        stmt->createStmt.columns[i].type,
+                        stmt->createStmt.columns[i].constraint);
+                    if (stmt->createStmt.columns[i].length != -1) {
+                        printf(", Length: %d", stmt->createStmt.columns[i].length);
+                    }
+                    printf("\n");
+                }
+            } else if (stmt->type == STATEMENT_DROP) {
+                printf("DROP table: %s\n", stmt->dropStmt.table);
+            } else {
+                printf("Unknown statement type!\n");
             }
-
 
             if (stmt != NULL) {
                 process_statement(stmt);

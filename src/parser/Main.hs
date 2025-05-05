@@ -4,7 +4,8 @@ module Main where
 
 import qualified Data.ByteString.Lazy.Char8 as B
 import Text.Parsec (parse, eof)
-import Data.Aeson (encode, Value(Null))
+import Text.Parsec.Error (errorMessages, Message(..))
+import Data.Aeson (encode, object, (.=))
 
 import Parser (parseSQL)
 
@@ -13,8 +14,14 @@ main = do
     input <- getLine
     case parse (parseSQL <* eof) "" input of
         Left err -> do
-            print err
-            B.writeFile "../output/output.json" (encode Null)
+            let msgs   = errorMessages err
+                custom = [s | Message s <- msgs]
+                errMsg = if not (null custom)
+                         then head custom
+                         else "Error: Invalid SQL Statement"
+                jsonErr = object ["error" .= errMsg]
+            B.writeFile "../output/output.json" (encode jsonErr)
         Right ast -> do
+            -- On success, encode the AST
             let jsonOutput = encode ast
             B.writeFile "../output/output.json" jsonOutput
