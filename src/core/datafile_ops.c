@@ -90,8 +90,9 @@ bool serialize_datafile(DataFile* df) {
     }
 
     typedef struct {
-        uint64_t write_ptr_offset;
         uint64_t magic;
+        uint64_t write_ptr_offset;
+        
     } DataFileHeader;
 
     DataFileHeader header;
@@ -134,8 +135,9 @@ bool deserialize_datafile(DataFile* df) {
     }
 
     typedef struct {
-        uint64_t write_ptr_offset;
         uint64_t magic;
+        uint64_t write_ptr_offset;
+        
     } DataFileHeader;
 
 
@@ -262,8 +264,6 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
 
     set_row_flag(row_content,true);
 
-    // uint64_t index = 0;
-
     *row_index += 9;
 
     printf("\n Num of val %ld\n", stmt->insertStmt.num_values);
@@ -277,12 +277,64 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
             // printf("%ld\n",strlen(stmt->insertStmt.values[index].value));
             serialize_string(stmt,row_content,row_index,index);
         }
-        // index+=1;
     }
 
     set_row_size(row_content,*row_index);
 
     return row_content;
+}
+
+void print_row_content(void* row_content, DataFile *df, uint64_t offset, MetadataPage *metadata) {
+    
+
+    uint64_t size ;
+    bool flag ;
+
+    memcpy(&size, row_content, sizeof(uint64_t));
+    memcpy(&flag, row_content + 8, sizeof(bool));
+
+    void* row_content = malloc(size);
+    memcpy(row_content, df->start_ptr + offset+9, size);
+
+    uint64_t row_byte_index = 0;  
+    uint64_t row_index = 0;
+
+    while (row_byte_index < size) {
+        switch (metadata->column_types[row_index])
+        {
+        case TYPE_VARCHAR:{
+            uint32_t string_length = *(uint32_t*)(row_content + row_byte_index);
+            row_byte_index += sizeof(uint32_t);
+
+            char *string_content = malloc(string_length + 1);
+            memcpy(string_content, df->start_ptr + + row_byte_index, string_length);
+            string_content[string_length] = '\0';
+            row_byte_index += string_length;
+
+            printf("String content: %s\n", string_content);
+            free(string_content);
+
+            break;
+        }
+        case TYPE_INT:{
+            int64_t int_value = *(int64_t*)(row_content + row_byte_index);
+            row_byte_index += sizeof(int64_t);
+
+            printf("Int value: %ld\n", int_value);
+            break;
+        }
+        default:
+            break;
+        }
+
+
+        row_index += 1;
+  
+    }
+
+
+
+
 }
 
 void print_entire_table(RowNode *node, DataFile *df) {
@@ -292,7 +344,7 @@ void print_entire_table(RowNode *node, DataFile *df) {
     }
 
     for (int i=0; i<node->num_keys; i+=1) {
-        uint64_t offset = node->raw_data[i] - df->start_ptr;
-        printf("Offset: %ld\n", offset);
+        uint64_t offset = node->raw_data[i];
+        printf("Offset: %x\n", offset);
     }
 }
