@@ -123,3 +123,4 @@ database/
 output/
 
 ./build
+/build
