@@ -166,17 +166,13 @@ void process_statement(Statement *stmt) {
             char* row_content = get_row_content(stmt,&row_size);
             printf("Row content: %ld\n",row_size);
             void *written_address = write_row(df, row_content, row_size);
-            
-
-
             const uint64_t current_id = global_id++;
             insert(current_id,written_address);
             set_file_dirty_db(db, true);
             set_file_dirty_df(df,true);
-            
-            traversal(root);
-            
-            commit_changes_db(db,metadata);
+
+
+            commit_changes_db(db, metadata);
             commit_changes_df(df);
 
             break;
@@ -189,9 +185,12 @@ void process_statement(Statement *stmt) {
             }else {
              // TODO : select specified columns
             }
+
             break;
         }
-        default: break;
+        default: 
+            printf("Unknown statement type\n");
+            break;
     }
 }
 
@@ -371,20 +370,9 @@ void database_init() {
 
     if(!db->size)
         init_create_db_memory_block(db);
-    // else {
-    //     root = load_btree_from_disk(db);
-    //     printf("%ld\n", root->page_num);
-    //     if (root) {
-    //         printf("B-Tree successfully loaded!\n");
-    //     } else {
-    //         printf("Failed to load B-Tree.\n");
-    //     }
-    // }
 
     if(!df->size)
         init_create_df_memory_block(df);
-    // else
-    //     load_datafile(df);
 
     printf("File size %ld\n",db->size);
 

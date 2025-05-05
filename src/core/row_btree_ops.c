@@ -298,7 +298,7 @@ void add_serialized_page(uint64_t page_num) {
 }
 
 void serialize_metadata(DBFile* db, MetadataPage* metadata) {
-    if (db==NULL || metadata==NULL) {
+    if (!db || !metadata) {
         printf("Error: Invalid database or metadata\n");
         return;
     }
@@ -317,7 +317,6 @@ void serialize_metadata(DBFile* db, MetadataPage* metadata) {
     
     // Write entire metadata page
     memcpy(db->data, metadata, METADATA_SIZE);
-    printf("Metadata serialized successfully\n");
 }
 
 void deserialize_metadata(DBFile* db, MetadataPage* metadata) {
@@ -344,116 +343,95 @@ void deserialize_metadata(DBFile* db, MetadataPage* metadata) {
     }
 }
 
-// void serialize_free_page_queue(DBFile* db) {
-//     if (!db || !free_page_queue) {
-//         printf("Error: Invalid database or queue\n");
-//         return;
-//     }
+void serialize_free_page_queue(DBFile* db) {
+    if (!db || !free_page_queue) {
+        printf("Error: Invalid database or queue\n");
+        return;
+    }
 
-//     size_t offset = sizeof(uint64_t); // Skip root page number
-//     unsigned char* bitmap = calloc(PAGE_SIZE - offset, 1);
+    size_t offset = sizeof(uint64_t); // Skip root page number
+    unsigned char* bitmap = calloc(PAGE_SIZE - offset, 1);
 
-//     // Set all bits to 1 (marking all pages as free)
-//     memset(bitmap, 0xFF, PAGE_SIZE - offset);
+    // Set all bits to 1 (marking all pages as free)
+    memset(bitmap, 0xFF, PAGE_SIZE - offset);
 
-//     // Mark used pages (set bits to 0)
-//     QueueNode* current = free_page_queue->front;
-//     while (current != NULL) {
-//         uint64_t page_num = current->data;
-//         // Calculate byte and bit position
-//         size_t byte_index = page_num / 8;
-//         uint8_t bit_pos = page_num % 8;
-//         // Set bit to 0 (page is used)
-//         bitmap[byte_index] &= ~(1 << bit_pos);
-//         current = current->next;
-//     }
+    // Mark used pages (set bits to 0)
+    QueueNode* current = free_page_queue->front;
+    while (current != NULL) {
+        uint64_t page_num = current->data;
+        // Calculate byte and bit position
+        size_t byte_index = page_num / 8;
+        uint8_t bit_pos = page_num % 8;
+        // Set bit to 0 (page is used)
+        bitmap[byte_index] &= ~(1 << bit_pos);
+        current = current->next;
+    }
 
-//     // Write bitmap to metadata page
-//     memcpy((char*)db->data + offset, bitmap, PAGE_SIZE - offset);
-//     free(bitmap);
-// }
+    // Write bitmap to metadata page
+    memcpy((char*)db->data + offset, bitmap, PAGE_SIZE - offset);
+    free(bitmap);
+}
 
 
-// void deserialize_free_page_queue(DBFile* db) {
-//     if (!db || !db->data) {
-//         printf("Error: Invalid database\n");
-//         return;
-//     }
+void deserialize_free_page_queue(DBFile* db) {
+    if (!db || !db->data) {
+        printf("Error: Invalid database\n");
+        return;
+    }
 
-//     size_t offset = sizeof(uint64_t); // Skip root page number
-//     unsigned char* bitmap = (unsigned char*)((char*)db->data + offset);
+    size_t offset = sizeof(uint64_t); // Skip root page number
+    unsigned char* bitmap = (unsigned char*)((char*)db->data + offset);
 
-//     // Create new queue
-//     Queue* new_queue = create_queue();
+    // Create new queue
+    Queue* new_queue = create_queue();
 
-//     // Read bitmap and reconstruct queue
-//     for (uint64_t page_num = 1; page_num < (PAGE_SIZE - offset) * 8; page_num++) {
-//         size_t byte_index = page_num / 8;
-//         uint8_t bit_pos = page_num % 8;
+    // Read bitmap and reconstruct queue
+    for (uint64_t page_num = 1; page_num < (PAGE_SIZE - offset) * 8; page_num++) {
+        size_t byte_index = page_num / 8;
+        uint8_t bit_pos = page_num % 8;
 
-//         // If bit is 1, page is free
-//         if (bitmap[byte_index] & (1 << bit_pos)) {
-//             push(new_queue, page_num);
-//         }
-//     }
+        // If bit is 1, page is free
+        if (bitmap[byte_index] & (1 << bit_pos)) {
+            push(new_queue, page_num);
+        }
+    }
 
-//     // Replace old queue with new one
-//     if (free_page_queue) {
-//         destroy_queue(free_page_queue);
-//     }
-//     free_page_queue = new_queue;
-// }
+    // Replace old queue with new one
+    if (free_page_queue) {
+        destroy_queue(free_page_queue);
+    }
+    free_page_queue = new_queue;
+}
 
 // Improved serialize_node function
 void serialize_node(DBFile* db, RowNode* node) {
     if (node == NULL) return;
-
+    
     // Check if the node has already been serialized
     if (is_page_serialized(node->page_num)) {
         return;
     }
-
-    // for(int i=0; i<170;i++){
-    //     if(node->plink[i]==-1)
-    //         node->plink[i]=NULL;
-    // }
-    // for(int i=0; i<170;i++){
-    //     if(node->link[i]==-1)
-    //         node->link[i]=0;
-    // }
-    // for(int i=0; i<169;i++){
-    //     if(node->raw_data[i]==-1)
-    //         node->raw_data[i]=0;
-    // }
     
     // Mark the node as serialized
     add_serialized_page(node->page_num);
+
     // Allocate buffer for serialization
     void* buffer = calloc(1, PAGE_SIZE);
     if (!buffer) {
         perror("Memory allocation failed");
         exit(EXIT_FAILURE);
     }
+    
     // Convert pointer links to page numbers
-    printf("Total keys in node: %d\n\n",node->num_keys);
     for (int i = 0; i <= node->num_keys; i++) {
-        // Initialize link to 0 first
-        node->link[i] = 0;
-        
-        // Only try to access plink if it's not NULL
         if (node->plink[i] != NULL) {
-            printf("%p \n\n",node->plink[i]);
-            if (node->plink[i]->page_num == node->page_num && node->plink[i]) {
-                printf("Error: Found self-reference in node %lu\n", node->page_num);
-                continue;
-            }
             node->link[i] = node->plink[i]->page_num;
-            printf("Node %lu -> child[%d] = %lu\n", 
-                node->page_num, i, node->link[i]);
-            }
+            printf("%ld %ld\n",node->page_num, node->link[i]);
+        } else {
+            node->link[i] = 0; // Explicitly set to 0 if no child
         }
-        printf("se fac toate operatiile\n\n");
-        
+    }
+    
     // Serialize node data
     size_t offset = 0;
     memcpy(buffer + offset, &node->is_leaf, sizeof(node->is_leaf));
@@ -472,10 +450,11 @@ void serialize_node(DBFile* db, RowNode* node) {
     offset += sizeof(node->raw_data);
     
     memcpy(buffer + offset, node->link, sizeof(node->link));
+
     // Write to disk
     write_on_memory_block(db, buffer, node->page_num);
     free(buffer);
-    printf("se scrie pe disk\n\n");
+    
     // Serialize child nodes
     for (int i = 0; i <= node->num_keys; i++) {
         if (node->plink[i] != NULL) {
@@ -498,9 +477,7 @@ void serialize_btree(DBFile* db, RowNode* root, MetadataPage* metadata) {
     metadata->root_page_num = root->page_num;
     // Serialize the rest of the tree
     serialize_node(db, root);
-    printf("sebi\n\n");
     serialize_metadata(db, metadata);
-    printf("sebi\n\n");
     
     printf("Serialization complete. Total nodes serialized: %d\n", serialized_count);
 }
@@ -609,7 +586,6 @@ RowNode* load_btree_from_disk(DBFile* db, MetadataPage* metadata) {
         printf("Table name: %s\n", metadata->table_name);
         printf("Number of columns: %d\n", metadata->num_columns);
         printf("Total nodes loaded: %d\n", visited_count);
-        
         
     }
     

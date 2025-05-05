@@ -71,7 +71,7 @@ typedef struct DataFile {
     int fd;
     void *start_ptr;
     ssize_t size;
-    void *write_ptr;
+    uint64_t write_ptr;
     bool dirty;
 }DataFile;
 

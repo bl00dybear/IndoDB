@@ -4,7 +4,10 @@
 
 void allocate_new_block(DataFile *df) {
     const size_t new_size = df->size + BLOCK_SIZE;
-    const size_t current_offset = (char*)df->write_ptr - (char*)df->start_ptr;
+    const size_t current_offset = df->write_ptr;
+
+    printf("Just before allocating new block\n");
+    printf("Current offset: %ld\n", current_offset);
 
     void* temp_buffer = NULL;
     if (df->size > 0) {
@@ -38,7 +41,7 @@ void allocate_new_block(DataFile *df) {
     }
 
     df->start_ptr = new_mapping;
-    df->write_ptr = (char*)new_mapping + current_offset;
+    df->write_ptr = current_offset;
     df->size = new_size;
     df->dirty = true;
 
@@ -50,17 +53,21 @@ void* write_row(DataFile* df, const void *row, const size_t row_size) {
     printf("\nFile size: %ld\n", df->size);
     printf("Row size: %ld\n", row_size);
 
-    size_t current_position = (size_t)(df->write_ptr - df->start_ptr);
+    uint64_t current_position = df->write_ptr;
 
+
+    printf("Current position: %ld\n", current_position);
 
     while (current_position + (size_t)row_size > (size_t)df->size) {
         allocate_new_block(df);
-        current_position = (size_t)(df->write_ptr - df->start_ptr);
+        printf("File size %ld\n", df->size);
+        printf("Row size %ld\n", current_position + (size_t)row_size);
+        // current_position = (size_t)(df->write_ptr);
     }
 
     void* written_address = df->write_ptr;
-    memcpy(df->write_ptr, row, row_size);
-    df->write_ptr = (char*)df->write_ptr + row_size;
+    memcpy(df->start_ptr+df->write_ptr, row, row_size);
+    df->write_ptr = df->write_ptr + row_size;
     df->dirty = true;
 
     return written_address;
@@ -88,7 +95,7 @@ bool serialize_datafile(DataFile* df) {
     } DataFileHeader;
 
     DataFileHeader header;
-    header.write_ptr_offset = (char*)df->write_ptr - (char*)df->start_ptr;
+    header.write_ptr_offset = df->write_ptr;
     header.magic = MAGIC_NUMBER;
 
     if (header.write_ptr_offset >= df->size) {
@@ -146,7 +153,7 @@ bool deserialize_datafile(DataFile* df) {
         return false;
     }
 
-    df->write_ptr = (char*)df->start_ptr + header.write_ptr_offset;
+    df->write_ptr = header.write_ptr_offset;
 
     return true;
 }
@@ -173,7 +180,7 @@ void load_datafile(DataFile* df) {
         return;
     }
     printf("Data file loaded successfully.\n");
-    printf("Write pointer offset: %p\n", df->write_ptr - df->start_ptr);
+    printf("Write pointer offset: %p\n", df->write_ptr);
 }
 
 int string_to_int(const char* str) {
@@ -255,11 +262,13 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
 
     set_row_flag(row_content,true);
 
-    uint64_t index = 0;
+    // uint64_t index = 0;
 
     *row_index += 9;
 
-    while (stmt->insertStmt.values[index].value != NULL) {
+    printf("\n Num of val %ld\n", stmt->insertStmt.num_values);
+
+    for (uint64_t index = 0; index < stmt->insertStmt.num_values; index++) {
         printf("%ld\n", index);
         if (strcmp(stmt->insertStmt.values[index].valueType,"Int") == 0) {
             serialize_int(stmt,row_content,row_index,index);
@@ -268,7 +277,7 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
             // printf("%ld\n",strlen(stmt->insertStmt.values[index].value));
             serialize_string(stmt,row_content,row_index,index);
         }
-        index+=1;
+        // index+=1;
     }
 
     set_row_size(row_content,*row_index);
