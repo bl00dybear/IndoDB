@@ -69,6 +69,16 @@ void parse_statement(const char *filename, Statement *stmt) {
         exit(1);
     }
 
+    // check for errors
+    cJSON *error_ptr = cJSON_GetObjectItemCaseSensitive(json, "error");
+    if(error_ptr) {
+        // gracefully display the error
+        printf("%s\n", error_ptr->valuestring);
+        cJSON_Delete(json);
+        free(data);
+        return;
+    }
+
     // Selectam ce tip de statement este
     cJSON *statement_type = cJSON_GetObjectItemCaseSensitive(json, "statement");
     // printf("Tip de stmt: %s\n", statement_type->valuestring);
@@ -209,6 +219,12 @@ int cli() {
             if (strcmp(line, "EXIT;") == 0) {
                 printf("Exiting IndoDB...\n");
                 return 0;
+            }
+
+            if (strcmp(line, "CLEAR;") == 0) {
+                printf("\033[H\033[J");
+                printf("IndoDB> ");
+                continue;
             }
 
             if (strlen(input) + strlen(line) + 2 < MAX_INPUT_SIZE) {
