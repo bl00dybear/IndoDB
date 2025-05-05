@@ -6,8 +6,10 @@ module Utils where
 
 import Text.Parsec
 import Text.Parsec.String (Parser)
-import Control.Monad (void)
+import Control.Monad ( void, zipWithM)
 import Data.Functor (($>))
+import Data.Char (toLower, toUpper)
+
 import AST
 
 lexeme :: Parser a -> Parser a
@@ -15,6 +17,11 @@ lexeme p = spaces *> p <* spaces
 
 identifier :: Parser String
 identifier = lexeme (many1 (letter <|> digit <|> char '_'))
+
+stringCI :: String -> Parser String
+stringCI s = try $ do
+    let matchChar target input = if toLower target == toLower input then return input else fail "Case-insensitive match failed"
+    zipWithM matchChar s =<< count (length s) anyChar
 
 parseValue :: Parser SQLValue
 parseValue = lexeme (try parseDate

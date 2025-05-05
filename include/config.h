@@ -22,5 +22,7 @@
 #define MAX_COLUMN_NAME 32
 #define METADATA_SIZE 4096 
 
+#define MAX_HISTORY 100
+
 
 #endif

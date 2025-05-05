@@ -13,5 +13,9 @@ extern DBFile* db;
 extern DataFile* df;
 extern MetadataPage* metadata;
 extern uint64_t global_id;
+extern int hist_len;
+extern struct termios orig_termios;
+extern char *history[MAX_HISTORY];
+
 
 #endif

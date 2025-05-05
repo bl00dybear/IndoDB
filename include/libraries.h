@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <linux/mman.h> 
 #include <stdint.h>
+#include <termios.h>
+
 
 
 #endif

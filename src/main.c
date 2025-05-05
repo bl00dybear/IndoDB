@@ -9,18 +9,6 @@
 #include "../include/utils/globals.h"
 #include "../include/utils/queue.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <termios.h>
-#include <unistd.h>
-#include <string.h>
-
-#define MAX_INPUT_SIZE 1024
-#define MAX_HISTORY 100
-
-static struct termios orig_termios;
-static char *history[MAX_HISTORY];
-static int hist_len = 0;
 
 void disable_raw_mode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
@@ -480,6 +468,8 @@ int cli() {
 
             if (stmt != NULL) {
                 process_statement(stmt);
+
+
                 if (stmt->type == STATEMENT_INSERT) {
                     printf("Parsed an INSERT statement!\n");
                 } else if (stmt->type == STATEMENT_SELECT) {
@@ -497,7 +487,8 @@ int cli() {
 
 void database_load() {
     root = load_btree_from_disk(db, metadata);
-    printf("%ld\n", root->page_num);
+    printf("Root page number: %ld\n", root->page_num);
+    printf("%ld\n\n", root->page_num);
     if (root) {
         printf("B-Tree successfully loaded!\n");
     } else {
@@ -593,8 +584,8 @@ void database_init() {
 
 bool is_database_empty() {
     typedef struct {
-        uint64_t write_ptr_offset;
         uint64_t magic;
+        uint64_t write_ptr_offset;
     } DataFileHeader;
 
     DataFileHeader header;
@@ -606,6 +597,7 @@ bool is_database_empty() {
 
 int main() {
     database_init();
+
 
     if (!is_database_empty()) {
         printf("Database is not empty!\n");

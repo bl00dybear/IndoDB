@@ -11,3 +11,7 @@ DBFile* db;
 DataFile* df;
 MetadataPage* metadata;
 uint64_t global_id = 1;
+
+char *history[MAX_HISTORY];
+int hist_len = 0;
+struct termios orig_termios;

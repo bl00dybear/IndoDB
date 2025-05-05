@@ -284,58 +284,58 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
     return row_content;
 }
 
-void print_row_content(void* row_content, DataFile *df, uint64_t offset, MetadataPage *metadata) {
+// void print_row_content(void* row_content, DataFile *df, uint64_t offset, MetadataPage *metadata) {
     
 
-    uint64_t size ;
-    bool flag ;
+//     uint64_t size ;
+//     bool flag ;
 
-    memcpy(&size, row_content, sizeof(uint64_t));
-    memcpy(&flag, row_content + 8, sizeof(bool));
+//     memcpy(&size, row_content, sizeof(uint64_t));
+//     memcpy(&flag, row_content + 8, sizeof(bool));
 
-    void* row_content = malloc(size);
-    memcpy(row_content, df->start_ptr + offset+9, size);
+//     void* row_content = malloc(size);
+//     memcpy(row_content, df->start_ptr + offset+9, size);
 
-    uint64_t row_byte_index = 0;  
-    uint64_t row_index = 0;
+//     uint64_t row_byte_index = 0;  
+//     uint64_t row_index = 0;
 
-    while (row_byte_index < size) {
-        switch (metadata->column_types[row_index])
-        {
-        case TYPE_VARCHAR:{
-            uint32_t string_length = *(uint32_t*)(row_content + row_byte_index);
-            row_byte_index += sizeof(uint32_t);
+//     while (row_byte_index < size) {
+//         switch (metadata->column_types[row_index])
+//         {
+//         case TYPE_VARCHAR:{
+//             uint32_t string_length = *(uint32_t*)(row_content + row_byte_index);
+//             row_byte_index += sizeof(uint32_t);
 
-            char *string_content = malloc(string_length + 1);
-            memcpy(string_content, df->start_ptr + + row_byte_index, string_length);
-            string_content[string_length] = '\0';
-            row_byte_index += string_length;
+//             char *string_content = malloc(string_length + 1);
+//             memcpy(string_content, df->start_ptr + + row_byte_index, string_length);
+//             string_content[string_length] = '\0';
+//             row_byte_index += string_length;
 
-            printf("String content: %s\n", string_content);
-            free(string_content);
+//             printf("String content: %s\n", string_content);
+//             free(string_content);
 
-            break;
-        }
-        case TYPE_INT:{
-            int64_t int_value = *(int64_t*)(row_content + row_byte_index);
-            row_byte_index += sizeof(int64_t);
+//             break;
+//         }
+//         case TYPE_INT:{
+//             int64_t int_value = *(int64_t*)(row_content + row_byte_index);
+//             row_byte_index += sizeof(int64_t);
 
-            printf("Int value: %ld\n", int_value);
-            break;
-        }
-        default:
-            break;
-        }
+//             printf("Int value: %ld\n", int_value);
+//             break;
+//         }
+//         default:
+//             break;
+//         }
 
 
-        row_index += 1;
+//         row_index += 1;
   
-    }
+//     }
 
 
 
 
-}
+// }
 
 void print_entire_table(RowNode *node, DataFile *df) {
     if (node == NULL) {
