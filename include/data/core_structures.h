@@ -43,6 +43,24 @@ typedef struct {
     RowNode* node;
 } NodeEntry;
 
+typedef enum {
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_VARCHAR,
+    TYPE_TIMESTAMP
+} ColumnType;
+
+typedef struct {
+    uint64_t root_page_num;                      // 8 bytes
+    char table_name[MAX_TABLE_NAME];             // 64 bytes
+    uint32_t num_columns;                        // 4 bytes
+    char column_names[MAX_COLUMNS][MAX_COLUMN_NAME];  // 32 * 32 = 1024 bytes
+    ColumnType column_types[MAX_COLUMNS];        // 32 * 4 = 128 bytes
+    uint32_t column_sizes[MAX_COLUMNS];          // 32 * 4 = 128 bytes
+    unsigned char free_page_bitmap[METADATA_SIZE - 8 - 64 - 4 - 1024 - 128 - 128];  // 2740 bytes (A total of 3.704.480 rows accepted in every table)
+} MetadataPage;
+
+
 extern NodeEntry visited_nodes[MAX_VISITED_NODES];
 extern int visited_count;
 

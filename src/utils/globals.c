@@ -9,4 +9,5 @@ uint64_t serialized_pages[MAX_VISITED_NODES];
 int serialized_count = 0;
 DBFile* db;
 DataFile* df;
+MetadataPage* metadata;
 uint64_t global_id = 1;

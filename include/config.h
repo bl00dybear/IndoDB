@@ -17,5 +17,10 @@
 #define INT_MAX INT8_MAX
 #define INT_MIN INT8_MIN
 
+#define MAX_TABLE_NAME 64
+#define MAX_COLUMNS 32
+#define MAX_COLUMN_NAME 32
+#define METADATA_SIZE 4096 
+
 
 #endif

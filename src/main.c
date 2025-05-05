@@ -291,7 +291,7 @@ int cli() {
 }
 
 void database_load() {
-    root = load_btree_from_disk(db);
+    root = load_btree_from_disk(db, metadata);
     printf("%ld\n", root->page_num);
     if (root) {
         printf("B-Tree successfully loaded!\n");
@@ -342,6 +342,11 @@ void database_init() {
 
     if(!((df = malloc(sizeof(DataFile))))){
         perror("Memory allocation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if(!((metadata = malloc(sizeof(MetadataPage))))){
+        perror("Metadata allocation failed");
         exit(EXIT_FAILURE);
     }
 

@@ -297,6 +297,52 @@ void add_serialized_page(uint64_t page_num) {
     }
 }
 
+void serialize_metadata(DBFile* db, MetadataPage* metadata) {
+    if (!db || !metadata) {
+        printf("Error: Invalid database or metadata\n");
+        return;
+    }
+    
+    // Update free page bitmap from queue
+    memset(metadata->free_page_bitmap, 0xFF, sizeof(metadata->free_page_bitmap));
+    
+    QueueNode* current = free_page_queue->front;
+    while (current != NULL) {
+        uint64_t page_num = current->data;
+        size_t byte_index = page_num / 8;
+        uint8_t bit_pos = page_num % 8;
+        metadata->free_page_bitmap[byte_index] &= ~(1 << bit_pos);
+        current = current->next;
+    }
+    
+    // Write entire metadata page
+    memcpy(db->data, metadata, METADATA_SIZE);
+}
+
+void deserialize_metadata(DBFile* db, MetadataPage* metadata) {
+    if (!db || !db->data || !metadata) {
+        printf("Error: Invalid database or metadata\n");
+        return;
+    }
+    
+    // Read entire metadata page
+    memcpy(metadata, db->data, METADATA_SIZE);
+    
+    // Reconstruct free page queue from bitmap
+    if (free_page_queue) {
+        destroy_queue(free_page_queue);
+    }
+    free_page_queue = create_queue();
+    
+    for (uint64_t page_num = 1; page_num < sizeof(metadata->free_page_bitmap) * 8; page_num++) {
+        size_t byte_index = page_num / 8;
+        uint8_t bit_pos = page_num % 8;
+        if (metadata->free_page_bitmap[byte_index] & (1 << bit_pos)) {
+            push(free_page_queue, page_num);
+        }
+    }
+}
+
 void serialize_free_page_queue(DBFile* db) {
     if (!db || !free_page_queue) {
         printf("Error: Invalid database or queue\n");
@@ -418,7 +464,7 @@ void serialize_node(DBFile* db, RowNode* node) {
 }
 
 // Modified function for serializing the entire B tree
-void serialize_btree(DBFile* db, RowNode* root) {
+void serialize_btree(DBFile* db, RowNode* root, MetadataPage* metadata) {
     if (!root) {
         printf("Error: Cannot serialize NULL root\n");
         return;
@@ -428,11 +474,8 @@ void serialize_btree(DBFile* db, RowNode* root) {
     serialized_count = 0;
 
     // Save the root page number in metadata (page 0)
-    uint64_t root_page_num = root->page_num;
-    memcpy(db->data, &root_page_num, sizeof(root_page_num));
-    printf("Serializing root page number %lu to metadata\n", root_page_num);
-
-    serialize_free_page_queue(db);
+    metadata->root_page_num = root->page_num;
+    serialize_metadata(db, metadata);
     // Serialize the rest of the tree
     serialize_node(db, root);
     
@@ -505,7 +548,7 @@ RowNode* deserialize_node(DBFile* db, uint64_t page_num) {
 }
 
 // Modified function for deserializing the entire B-tree
-RowNode* deserialize_btree(DBFile* db) {
+RowNode* deserialize_btree(DBFile* db, MetadataPage* metadata) {
     // Reset the array of visited nodes
     visited_count = 0;
 
@@ -515,34 +558,35 @@ RowNode* deserialize_btree(DBFile* db) {
         return NULL;
     }
     
-    uint64_t root_page_num;
-
-    // Read root_page_num from page 0
-    memcpy(&root_page_num, db->data, sizeof(root_page_num));
-    printf("Deserialized root from page %lu\n", root_page_num);
-
-    deserialize_free_page_queue(db);
+    deserialize_metadata(db, metadata);
 
     // Check if root_page_num is valid
-    if (root_page_num == 0 || root_page_num * PAGE_SIZE >= db->size) {
-        printf("Error: Invalid root page number: %lu\n", root_page_num);
+    if (metadata->root_page_num == 0 || metadata->root_page_num * PAGE_SIZE >= db->size) {
+        printf("Error: Invalid root page number: %lu\n", metadata->root_page_num);
         return NULL;
     }
 
     // Tree load
-    return deserialize_node(db, root_page_num);
+    return deserialize_node(db, metadata->root_page_num);
 }
 
 // Main function for loading the tree from disk
-RowNode* load_btree_from_disk(DBFile* db) {
+RowNode* load_btree_from_disk(DBFile* db, MetadataPage* metadata) {
+    if (!db || !metadata) {
+        printf("Error: Invalid database or metadata\n");
+        return NULL;
+    }
     printf("Loading B-tree from disk...\n");
-    RowNode* loaded_root = deserialize_btree(db);
+    RowNode* loaded_root = deserialize_btree(db,metadata);
     
     if (loaded_root == NULL) {
         printf("Failed to load B-tree from disk\n");
     } else {
         printf("Successfully loaded B-tree with root at page %lu\n", loaded_root->page_num);
+        printf("Table name: %s\n", metadata->table_name);
+        printf("Number of columns: %d\n", metadata->num_columns);
         printf("Total nodes loaded: %d\n", visited_count);
+        
     }
     
     return loaded_root;

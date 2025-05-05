@@ -69,7 +69,7 @@
  */
 
 RowNode *create_node(const uint64_t key, void *data, RowNode *child);
-void write_on_memory_block(DBFile *db, void* new_data, u_int64_t page_num);
+void write_on_memory_block(DBFile *db, void* new_data, uint64_t page_num);
 void insert_node(const uint64_t key, void* data, const int pos, RowNode *node, RowNode *child);
 void split_node(const uint64_t key, void *data, int *pval, const int pos, struct RowNode *node, struct RowNode *child, struct RowNode **newNode);
 int set_value(const uint64_t key, void* data, int *pval, struct RowNode *node, struct RowNode **child);
@@ -80,10 +80,10 @@ void add_visited_node(uint64_t page_num, RowNode* node);
 bool is_page_serialized(uint64_t page_num);
 void add_serialized_page(uint64_t page_num);
 void serialize_node(DBFile* db, RowNode* node);
-void serialize_btree(DBFile* db, RowNode* root);
+void serialize_btree(DBFile* db, RowNode* root, MetadataPage* metadata);
 RowNode* deserialize_node(DBFile* db, uint64_t page_num);
-RowNode* deserialize_btree(DBFile* db);
-RowNode* load_btree_from_disk(DBFile* db);
+RowNode* deserialize_btree(DBFile* db, MetadataPage* metadata);
+RowNode* load_btree_from_disk(DBFile* db, MetadataPage* metadata);
 int find_predecessor(const struct RowNode *node);
 int find_successor(const struct RowNode *node);
 void shift_left(struct RowNode *node, const int pos);
