@@ -324,29 +324,35 @@ int parse_statement(const char *filename, Statement *stmt) {
     return 0;
 }
 
-void process_statement(Statement *stmt) {
+void process_statement(Statement *stmt,MetadataPage *metadata) {
     switch (stmt->type) {
         case STATEMENT_INSERT: {
-            uint64_t row_size = 0;
-            char* row_content = get_row_content(stmt,&row_size);
-            printf("Row content: %ld\n",row_size);
-            void *written_address = write_row(df, row_content, row_size);
-            const uint64_t current_id = global_id++;
-            insert(current_id,written_address);
-            set_file_dirty_db(db, true);
-            set_file_dirty_df(df,true);
+            if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
+                uint64_t row_size = 0;
+                char* row_content = get_row_content(stmt,&row_size);
+                printf("Row content: %ld\n",row_size);
+                void *written_address = write_row(df, row_content, row_size);
+                const uint64_t current_id = global_id++;
+                insert(current_id,written_address);
+                set_file_dirty_db(db, true);
+                set_file_dirty_df(df,true);
 
 
-            commit_changes_db(db, metadata);
-            commit_changes_df(df);
+                commit_changes_db(db, metadata);
+                commit_changes_df(df);
+            }else{
+                printf("Table %s not found in database\n", stmt->insertStmt.table);
+            }
 
             break;
         }
         case STATEMENT_SELECT: {
             if (!strcmp(stmt -> selectStmt.columns[0],"*")) {
-                // printf("Selecting all columns\n");
-                traversal(root);
-                print_entire_table(root,df);
+                if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
+                    print_entire_table(root,df,metadata,stmt);
+                } else {
+                    printf("Table %s not found in database\n", stmt->selectStmt.table);
+                }
             }else {
              // TODO : select specified columns
             }
@@ -477,7 +483,7 @@ int cli() {
             }
 
             if (stmt != NULL) {
-                process_statement(stmt);
+                process_statement(stmt,metadata);
 
 
                 if (stmt->type == STATEMENT_INSERT) {

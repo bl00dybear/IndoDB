@@ -284,68 +284,92 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
     return row_content;
 }
 
-// void print_row_content(void* row_content, DataFile *df, uint64_t offset, MetadataPage *metadata) {
+void print_row_content(void* row_content, DataFile *df, uint64_t offset, MetadataPage *metadata, Statement *stmt) {
     
+    uint8_t row_size;
 
-//     uint64_t size ;
-//     bool flag ;
+    memcpy(&row_size, row_content, sizeof(uint8_t));
+    // printf("Row size: %lu\n", row_size);
 
-//     memcpy(&size, row_content, sizeof(uint64_t));
-//     memcpy(&flag, row_content + 8, sizeof(bool));
-
-//     void* row_content = malloc(size);
-//     memcpy(row_content, df->start_ptr + offset+9, size);
-
-//     uint64_t row_byte_index = 0;  
-//     uint64_t row_index = 0;
-
-//     while (row_byte_index < size) {
-//         switch (metadata->column_types[row_index])
-//         {
-//         case TYPE_VARCHAR:{
-//             uint32_t string_length = *(uint32_t*)(row_content + row_byte_index);
-//             row_byte_index += sizeof(uint32_t);
-
-//             char *string_content = malloc(string_length + 1);
-//             memcpy(string_content, df->start_ptr + + row_byte_index, string_length);
-//             string_content[string_length] = '\0';
-//             row_byte_index += string_length;
-
-//             printf("String content: %s\n", string_content);
-//             free(string_content);
-
-//             break;
-//         }
-//         case TYPE_INT:{
-//             int64_t int_value = *(int64_t*)(row_content + row_byte_index);
-//             row_byte_index += sizeof(int64_t);
-
-//             printf("Int value: %ld\n", int_value);
-//             break;
-//         }
-//         default:
-//             break;
-//         }
+    bool flag;
+    memcpy(&flag, row_content + 8, sizeof(bool));
 
 
-//         row_index += 1;
-  
-//     }
+    void* row_content_mem = malloc(row_size-9);
+    memcpy(row_content_mem, row_content+9, row_size-9);
 
 
 
 
-// }
 
-void print_entire_table(RowNode *node, DataFile *df) {
+    uint64_t row_byte_index = 0;  
+    uint64_t row_index = 0;
+
+    // printf("Num columns: %ld\n", stmt->selectStmt.num_columns);
+
+    // printf("%d\n\n",metadata->column_types[0]);
+
+    while (row_index < metadata->num_columns) {
+        switch (metadata->column_types[row_index])
+        {
+        case TYPE_VARCHAR:{
+            uint32_t string_len;
+
+            memcpy(&string_len, row_content_mem + row_byte_index, sizeof(uint32_t));
+            row_byte_index += sizeof(uint32_t);
+
+            // printf("Flag: %d\n", flag);
+            // printf("String length: %d\n", string_len);
+
+            char *string_content = malloc(string_len + 1);
+            memcpy(string_content, row_content_mem + row_byte_index, string_len);
+            string_content[string_len] = '\0';
+            row_byte_index += string_len;
+
+            printf("\nString content: %s\n", string_content);
+            free(string_content);
+
+            break;
+        }
+        case TYPE_INT:{
+            int64_t int_value = *(int64_t*)(row_content_mem + row_byte_index);
+            row_byte_index += sizeof(int64_t);
+
+            printf("Int value: %ld\n", int_value);
+            break;
+        }
+        default:
+            break;
+        }
+        // printf("\nCol type: %d\n\n",metadata->column_types[row_index]);
+
+
+        row_index += 1;
+        
+    }
+
+    free(row_content_mem);
+}
+
+void print_entire_table(RowNode *node, DataFile *df, MetadataPage *metadata,Statement *stmt) {
     if (node == NULL) {
         printf("Node is NULL\n");
         return;
     }
 
-    for (int i=0; i<node->num_keys; i+=1) {
+    for (int i=1; i<=node->num_keys; i+=1) {
         uint64_t offset = node->raw_data[i];
-        printf("Offset: %x\n", offset);
+        void * row_content = df->start_ptr + offset;
+        // printf("Offset: %X\n", offset);
+
+        print_row_content(row_content, df, offset, metadata,stmt);
+    }
+
+
+    for (int i = 0; i <= node->num_keys; i++) {
+        if (node->plink[i] != NULL) {
+            print_entire_table(node->plink[i],df, metadata,stmt);
+        }
     }
 }
 
