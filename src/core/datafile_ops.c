@@ -351,6 +351,7 @@ void print_row_content(void* row_content, DataFile *df, uint64_t offset, Metadat
     free(row_content_mem);
 }
 
+
 void print_entire_table(RowNode *node, DataFile *df, MetadataPage *metadata,Statement *stmt) {
     if (node == NULL) {
         printf("Node is NULL\n");

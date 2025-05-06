@@ -23,6 +23,7 @@ void enable_raw_mode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
+
 int read_line(char *buf, size_t size) {
     int len = 0, pos = 0, hist_pos = hist_len;
     char c;
