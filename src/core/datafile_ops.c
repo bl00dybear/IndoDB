@@ -1,6 +1,7 @@
 #include "../../include/core/datafile_ops.h"
 #include "../../include/data/parser_structures.h"
 #include "../../include/utils/globals.h"
+#include "../../include/data/core_structures.h"
 
 void allocate_new_block(DataFile *df) {
     const size_t new_size = df->size + BLOCK_SIZE;
@@ -49,7 +50,7 @@ void allocate_new_block(DataFile *df) {
     // printf("New block starts at offset: %ld\n", df->size - BLOCK_SIZE);
 }
 
-void* write_row(DataFile* df, const void *row, const size_t row_size) {
+uint64_t write_row(DataFile* df, const void *row, const size_t row_size) {
     // printf("\nFile size: %ld\n", df->size);
     // printf("Row size: %ld\n", row_size);
 
@@ -99,9 +100,9 @@ bool serialize_datafile(DataFile* df) {
     header.write_ptr_offset = df->write_ptr;
     header.magic = MAGIC_NUMBER;
 
-    if (header.write_ptr_offset >= df->size) {
-        fprintf(stderr, "Error: Invalid write_ptr offset: %lu exceeds file size: %ld\n",
-                header.write_ptr_offset, df->size);
+    if (header.write_ptr_offset >= (uint64_t)df->size) {
+        fprintf(stderr, "Error: Invalid write_ptr offset: %lu exceeds file size: %lu\n",
+                header.write_ptr_offset, (uint64_t)df->size);
         return false;
     }
 
@@ -129,7 +130,7 @@ bool deserialize_datafile(DataFile* df) {
         return false;
     }
 
-    if (df->size < sizeof(uint64_t) * 2) {
+    if ((uint64_t)df->size < sizeof(uint64_t) * 2) {
         fprintf(stderr, "Error: File too small to contain header\n");
         return false;
     }
@@ -149,7 +150,7 @@ bool deserialize_datafile(DataFile* df) {
         return false;
     }
 
-    if (header.write_ptr_offset >= df->size) {
+    if (header.write_ptr_offset >= (uint64_t)df->size) {
         fprintf(stderr, "Error: Invalid write_ptr offset in file: %lu\n",
                 header.write_ptr_offset);
         return false;
@@ -285,7 +286,7 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
 }
 
 
-void print_row_content(void* row_content, DataFile *df, uint64_t offset, MetadataPage *metadata, Statement *stmt) {
+void print_row_content(void* row_content,  MetadataPage *metadata) {
     uint64_t row_size;
     memcpy(&row_size, row_content, sizeof(uint64_t));
 
@@ -410,7 +411,7 @@ void display_table_anthet(MetadataPage *metadata) {
     print_separator(metadata->num_columns);
 
     // Afișează titlurile coloanelor
-    for (int i = 0; i < metadata->num_columns; i++) {
+    for (uint32_t i = 0; i < metadata->num_columns; i++) {
         printf("| %-*s ", column_width, metadata->column_names[i]);
     }
     printf("|\n");
@@ -429,7 +430,7 @@ void display_all_rows(RowNode *node, DataFile *df, MetadataPage *metadata, State
         void *row_content = df->start_ptr + offset;
 
         printf("|");
-        print_row_content(row_content, df, offset, metadata, stmt);
+        print_row_content(row_content,metadata);
         printf("\n");
         
         // Adaugă un separator după fiecare rând
