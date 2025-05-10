@@ -331,7 +331,7 @@ void process_statement(Statement *stmt,MetadataPage *metadata) {
             if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
                 uint64_t row_size = 0;
                 char* row_content = get_row_content(stmt,&row_size);
-                printf("Row content: %ld\n",row_size);
+                // printf("Row content: %ld\n",row_size);
                 void *written_address = write_row(df, row_content, row_size);
                 const uint64_t current_id = global_id++;
                 insert(current_id,written_address);
@@ -350,7 +350,7 @@ void process_statement(Statement *stmt,MetadataPage *metadata) {
         case STATEMENT_SELECT: {
             if (!strcmp(stmt -> selectStmt.columns[0],"*")) {
                 if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
-                    print_entire_table(root,df,metadata,stmt);
+                    display_table(root,df,metadata,stmt);
                 } else {
                     printf("Table %s not found in database\n", stmt->selectStmt.table);
                 }
@@ -445,53 +445,53 @@ int cli() {
 
             // TESTEAZA AICI
             // TESTEAZA AICI
-            if (stmt->type == STATEMENT_INSERT) {
-                printf("INSERT into table: %s\n", stmt->insertStmt.table);
-                for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
-                    printf("Column: %s\n", stmt->insertStmt.columns[i]);
-                }
-                for (int i = 0; i < stmt->insertStmt.num_values; i++) {
-                    printf("Value: %s (Type: %s)\n",
-                        stmt->insertStmt.values[i].value,
-                        stmt->insertStmt.values[i].valueType);
-                }
-            } else if (stmt->type == STATEMENT_SELECT) {
-                printf("SELECT from table: %s\n", stmt->selectStmt.table);
-                for (int i = 0; i < stmt->selectStmt.num_columns; i++) {
-                    printf("Column: %s\n", stmt->selectStmt.columns[i]);
-                }
-                if (stmt->selectStmt.condition) {
-                    printf("Condition: %s\n", stmt->selectStmt.condition);
-                } else {
-                    printf("No condition\n");
-                }
-            } else if (stmt->type == STATEMENT_CREATE) {
-                printf("CREATE table: %s\n", stmt->createStmt.table);
-                for (int i = 0; i < stmt->createStmt.num_columns; i++) {
-                    printf("Column: %s, Type: %s, Constraint: %d",
-                        stmt->createStmt.columns[i].column_name,
-                        stmt->createStmt.columns[i].type,
-                        stmt->createStmt.columns[i].constraint);
-                    if (stmt->createStmt.columns[i].length != -1) {
-                        printf(", Length: %d", stmt->createStmt.columns[i].length);
-                    }
-                    printf("\n");
-                }
-            } else if (stmt->type == STATEMENT_DROP) {
-                printf("DROP table: %s\n", stmt->dropStmt.table);
-            } else {
-                printf("Unknown statement type!\n");
-            }
+            // if (stmt->type == STATEMENT_INSERT) {
+            //     printf("INSERT into table: %s\n", stmt->insertStmt.table);
+            //     for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
+            //         printf("Column: %s\n", stmt->insertStmt.columns[i]);
+            //     }
+            //     for (int i = 0; i < stmt->insertStmt.num_values; i++) {
+            //         printf("Value: %s (Type: %s)\n",
+            //             stmt->insertStmt.values[i].value,
+            //             stmt->insertStmt.values[i].valueType);
+            //     }
+            // } else if (stmt->type == STATEMENT_SELECT) {
+            //     printf("SELECT from table: %s\n", stmt->selectStmt.table);
+            //     for (int i = 0; i < stmt->selectStmt.num_columns; i++) {
+            //         printf("Column: %s\n", stmt->selectStmt.columns[i]);
+            //     }
+            //     if (stmt->selectStmt.condition) {
+            //         printf("Condition: %s\n", stmt->selectStmt.condition);
+            //     } else {
+            //         printf("No condition\n");
+            //     }
+            // } else if (stmt->type == STATEMENT_CREATE) {
+            //     printf("CREATE table: %s\n", stmt->createStmt.table);
+            //     for (int i = 0; i < stmt->createStmt.num_columns; i++) {
+            //         printf("Column: %s, Type: %s, Constraint: %d",
+            //             stmt->createStmt.columns[i].column_name,
+            //             stmt->createStmt.columns[i].type,
+            //             stmt->createStmt.columns[i].constraint);
+            //         if (stmt->createStmt.columns[i].length != -1) {
+            //             printf(", Length: %d", stmt->createStmt.columns[i].length);
+            //         }
+            //         printf("\n");
+            //     }
+            // } else if (stmt->type == STATEMENT_DROP) {
+            //     printf("DROP table: %s\n", stmt->dropStmt.table);
+            // } else {
+            //     printf("Unknown statement type!\n");
+            // }
 
             if (stmt != NULL) {
                 process_statement(stmt,metadata);
 
 
-                if (stmt->type == STATEMENT_INSERT) {
-                    printf("Parsed an INSERT statement!\n");
-                } else if (stmt->type == STATEMENT_SELECT) {
-                    printf("Parsed a SELECT statement!\n");
-                }
+                // if (stmt->type == STATEMENT_INSERT) {
+                //     printf("Parsed an INSERT statement!\n");
+                // } else if (stmt->type == STATEMENT_SELECT) {
+                //     printf("Parsed a SELECT statement!\n");
+                // }
                 free_statement(stmt);
             }else {
                 printf("Failed to parse statement!\n");
@@ -504,11 +504,9 @@ int cli() {
 
 void database_load() {
     root = load_btree_from_disk(db, metadata);
-    printf("Root page number: %ld\n", root->page_num);
-    printf("%ld\n\n", root->page_num);
-    if (root) {
-        printf("B-Tree successfully loaded!\n");
-    } else {
+    // printf("Root page number: %ld\n", root->page_num);
+    // printf("%ld\n\n", root->page_num);
+    if (!root) {
         printf("Failed to load B-Tree.\n");
     }
 
@@ -581,7 +579,7 @@ void database_init() {
     if(!df->size)
         init_create_df_memory_block(df);
 
-    printf("File size %ld\n",db->size);
+    // printf("File size %ld\n",db->size);
 
     memory_map_db_file(db);
     memory_map_df_file(df);
@@ -590,7 +588,7 @@ void database_init() {
     set_file_dirty_df(df, false);
     set_new_file_free_blocks(db);
 
-    printf("%d %ld\n",db->fd,db->size);
+    // printf("%d %ld\n",db->fd,db->size);
 
     free_page_queue = create_queue();
 
@@ -617,7 +615,7 @@ int main() {
 
 
     if (!is_database_empty()) {
-        printf("Database is not empty!\n");
+        // printf("Database is not empty!\n");
         database_load();
     }
 

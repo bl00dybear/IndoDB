@@ -6,8 +6,8 @@ void allocate_new_block(DataFile *df) {
     const size_t new_size = df->size + BLOCK_SIZE;
     const size_t current_offset = df->write_ptr;
 
-    printf("Just before allocating new block\n");
-    printf("Current offset: %ld\n", current_offset);
+    // printf("Just before allocating new block\n");
+    // printf("Current offset: %ld\n", current_offset);
 
     void* temp_buffer = NULL;
     if (df->size > 0) {
@@ -45,27 +45,27 @@ void allocate_new_block(DataFile *df) {
     df->size = new_size;
     df->dirty = true;
 
-    printf("\nData file extended to size: %zu bytes\n", new_size);
-    printf("New block starts at offset: %ld\n", df->size - BLOCK_SIZE);
+    // printf("\nData file extended to size: %zu bytes\n", new_size);
+    // printf("New block starts at offset: %ld\n", df->size - BLOCK_SIZE);
 }
 
 void* write_row(DataFile* df, const void *row, const size_t row_size) {
-    printf("\nFile size: %ld\n", df->size);
-    printf("Row size: %ld\n", row_size);
+    // printf("\nFile size: %ld\n", df->size);
+    // printf("Row size: %ld\n", row_size);
 
     uint64_t current_position = df->write_ptr;
 
 
-    printf("Current position: %ld\n", current_position);
+    // printf("Current position: %ld\n", current_position);
 
     while (current_position + (size_t)row_size > (size_t)df->size) {
         allocate_new_block(df);
-        printf("File size %ld\n", df->size);
-        printf("Row size %ld\n", current_position + (size_t)row_size);
+        // printf("File size %ld\n", df->size);
+        // printf("Row size %ld\n", current_position + (size_t)row_size);
         // current_position = (size_t)(df->write_ptr);
     }
 
-    void* written_address = df->write_ptr;
+    uint64_t written_address = df->write_ptr;
     memcpy(df->start_ptr+df->write_ptr, row, row_size);
     df->write_ptr = df->write_ptr + row_size;
     df->dirty = true;
@@ -172,7 +172,7 @@ void commit_changes_df(DataFile *df) {
         }
 
         set_file_dirty_df(df, false);
-        printf("Changes (raw data) successfully committed to disk.\n");
+        // printf("Changes (raw data) successfully committed to disk.\n");
     }
 }
 
@@ -181,8 +181,8 @@ void load_datafile(DataFile* df) {
         fprintf(stderr, "Error: Failed to deserialize data file\n");
         return;
     }
-    printf("Data file loaded successfully.\n");
-    printf("Write pointer offset: %p\n", df->write_ptr);
+    // printf("Data file loaded successfully.\n");
+    // printf("Write pointer offset: %p\n", df->write_ptr);
 }
 
 int string_to_int(const char* str) {
@@ -266,10 +266,10 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
 
     *row_index += 9;
 
-    printf("\n Num of val %ld\n", stmt->insertStmt.num_values);
+    // printf("\n Num of val %ld\n", stmt->insertStmt.num_values);
 
-    for (uint64_t index = 0; index < stmt->insertStmt.num_values; index++) {
-        printf("%ld\n", index);
+    for (uint64_t index = 0; index < (uint64_t)stmt->insertStmt.num_values; index++) {
+        // printf("%ld\n", index);
         if (strcmp(stmt->insertStmt.values[index].valueType,"Int") == 0) {
             serialize_int(stmt,row_content,row_index,index);
         }
@@ -284,95 +284,173 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
     return row_content;
 }
 
-void print_row_content(void* row_content, DataFile *df, uint64_t offset, MetadataPage *metadata, Statement *stmt) {
-    
-    uint8_t row_size;
 
-    memcpy(&row_size, row_content, sizeof(uint8_t));
-    // printf("Row size: %lu\n", row_size);
+void print_row_content(void* row_content, DataFile *df, uint64_t offset, MetadataPage *metadata, Statement *stmt) {
+    uint64_t row_size;
+    memcpy(&row_size, row_content, sizeof(uint64_t));
 
     bool flag;
     memcpy(&flag, row_content + 8, sizeof(bool));
 
-
     void* row_content_mem = malloc(row_size-9);
     memcpy(row_content_mem, row_content+9, row_size-9);
 
-
-
-
-
-    uint64_t row_byte_index = 0;  
-    uint64_t row_index = 0;
-
-    // printf("Num columns: %ld\n", stmt->selectStmt.num_columns);
-
-    // printf("%d\n\n",metadata->column_types[0]);
-
-    while (row_index < metadata->num_columns) {
-        switch (metadata->column_types[row_index])
-        {
-        case TYPE_VARCHAR:{
+    uint64_t row_byte_index = 0;
+    
+    // Structuri pentru a stoca datele citite
+    typedef struct {
+        int type;
+        union {
+            char* str_value;
+            int64_t int_value;
+        };
+        uint32_t str_len;
+    } ColumnValue;
+    
+    ColumnValue values[MAX_COLUMNS];
+    int max_lines = 1;
+    
+    // Prima etapă: citim toate valorile și determinăm numărul de linii necesare
+    for (uint64_t col = 0; col < metadata->num_columns; col++) {
+        values[col].type = metadata->column_types[col];
+        
+        switch (values[col].type) {
+        case TYPE_VARCHAR: {
             uint32_t string_len;
-
             memcpy(&string_len, row_content_mem + row_byte_index, sizeof(uint32_t));
             row_byte_index += sizeof(uint32_t);
 
-            // printf("Flag: %d\n", flag);
-            // printf("String length: %d\n", string_len);
-
-            char *string_content = malloc(string_len + 1);
-            memcpy(string_content, row_content_mem + row_byte_index, string_len);
-            string_content[string_len] = '\0';
+            values[col].str_value = malloc(string_len + 1);
+            memcpy(values[col].str_value, row_content_mem + row_byte_index, string_len);
+            values[col].str_value[string_len] = '\0';
+            values[col].str_len = string_len;
             row_byte_index += string_len;
-
-            printf("\nString content: %s\n", string_content);
-            free(string_content);
-
+            
+            // Calculăm câte linii avem nevoie pentru acest string
+            int lines_needed = (string_len + 31) / 32; // Rotunjire în sus
+            if (lines_needed > max_lines) {
+                max_lines = lines_needed;
+            }
             break;
         }
-        case TYPE_INT:{
-            int64_t int_value = *(int64_t*)(row_content_mem + row_byte_index);
+        case TYPE_INT: {
+            memcpy(&values[col].int_value, row_content_mem + row_byte_index, sizeof(int64_t));
             row_byte_index += sizeof(int64_t);
-
-            printf("Int value: %ld\n", int_value);
             break;
         }
         default:
+            values[col].type = -1; // Tip necunoscut
             break;
         }
-        // printf("\nCol type: %d\n\n",metadata->column_types[row_index]);
-
-
-        row_index += 1;
+    }
+    
+    // A doua etapă: afișăm valorile pe mai multe linii
+    for (int line = 0; line < max_lines; line++) {
+        if (line > 0) {
+            printf("\n|"); // Începem o linie nouă
+        }
         
+        for (uint64_t col = 0; col < metadata->num_columns; col++) {
+            switch (values[col].type) {
+            case TYPE_VARCHAR: {
+                uint32_t start = line * 32;
+                if (start < values[col].str_len) {
+                    uint32_t display_len = ((values[col].str_len - start) > 32) ? 32 : (values[col].str_len - start);
+                    printf(" %-32.*s |", display_len, values[col].str_value + start);
+                } else {
+                    printf(" %-32s |", ""); // Spațiu gol pentru această celulă
+                }
+                break;
+            }
+            case TYPE_INT: {
+                if (line == 0) {
+                    printf(" %-32ld |", values[col].int_value);
+                } else {
+                    printf(" %-32s |", ""); // Spațiu gol pentru rândurile ulterioare
+                }
+                break;
+            }
+            default:
+                if (line == 0) {
+                    printf(" %-32s |", "UNKNOWN");
+                } else {
+                    printf(" %-32s |", "");
+                }
+                break;
+            }
+        }
+    }
+    
+    // Eliberăm memoria
+    for (uint64_t col = 0; col < metadata->num_columns; col++) {
+        if (values[col].type == TYPE_VARCHAR) {
+            free(values[col].str_value);
+        }
     }
 
     free(row_content_mem);
 }
 
+void print_separator(int num_columns) {
+    int column_width = 32;  // Aceeași lățime ca în display_table_anthet
+    
+    for (int i = 0; i < num_columns; i++) {
+        printf("+");
+        for (int j = 0; j < column_width + 2; j++) {
+            printf("-");
+        }
+    }
+    printf("+\n");
+}
 
-void print_entire_table(RowNode *node, DataFile *df, MetadataPage *metadata,Statement *stmt) {
+void display_table_anthet(MetadataPage *metadata) {
+    int column_width = 32;  // Folosește aceeași lățime pentru toate coloanele
+
+    printf("\n");
+    print_separator(metadata->num_columns);
+
+    // Afișează titlurile coloanelor
+    for (int i = 0; i < metadata->num_columns; i++) {
+        printf("| %-*s ", column_width, metadata->column_names[i]);
+    }
+    printf("|\n");
+
+    print_separator(metadata->num_columns);
+}
+
+
+void display_all_rows(RowNode *node, DataFile *df, MetadataPage *metadata, Statement *stmt) {
     if (node == NULL) {
-        printf("Node is NULL\n");
         return;
     }
 
-    for (int i=1; i<=node->num_keys; i+=1) {
+    for (int i = 1; i <= node->num_keys; i++) {
         uint64_t offset = node->raw_data[i];
-        void * row_content = df->start_ptr + offset;
-        // printf("Offset: %X\n", offset);
+        void *row_content = df->start_ptr + offset;
 
-        print_row_content(row_content, df, offset, metadata,stmt);
+        printf("|");
+        print_row_content(row_content, df, offset, metadata, stmt);
+        printf("\n");
+        
+        // Adaugă un separator după fiecare rând
+        print_separator(metadata->num_columns);
     }
-
 
     for (int i = 0; i <= node->num_keys; i++) {
         if (node->plink[i] != NULL) {
-            print_entire_table(node->plink[i],df, metadata,stmt);
+            display_all_rows(node->plink[i], df, metadata, stmt);
         }
     }
 }
+
+void display_table(RowNode *node, DataFile *df, MetadataPage *metadata,Statement *stmt){
+    display_table_anthet(metadata);
+
+    display_all_rows(node, df, metadata, stmt);
+    printf("\n");
+}
+
+
 
 
 void set_table_parameters(MetadataPage *metadata, Statement *stmt) {    
@@ -401,9 +479,9 @@ void set_table_parameters(MetadataPage *metadata, Statement *stmt) {
             metadata->column_sizes[i] = sizeof(uint64_t); // Timestamp stocat ca un întreg pe 64 de biți
         } 
         else {
-            // Tip necunoscut, setează implicit la INT
-            printf("Warning: Unknown type '%s' for column '%s', defaulting to INT\n", 
-                stmt->createStmt.columns[i].type, stmt->createStmt.columns[i].column_name);
+            // // Tip necunoscut, setează implicit la INT
+            // printf("Warning: Unknown type '%s' for column '%s', defaulting to INT\n", 
+            //     stmt->createStmt.columns[i].type, stmt->createStmt.columns[i].column_name);
             metadata->column_types[i] = TYPE_INT;
             metadata->column_sizes[i] = sizeof(int);
         }

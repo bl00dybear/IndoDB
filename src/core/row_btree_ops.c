@@ -191,34 +191,34 @@ int set_value(const uint64_t key, void* data, int *pval, struct RowNode *node, s
 }
 
 // Function to search for a value in the B-tree
-void search(const int val, int *pos, RowNode *myNode) {
+void search(const uint64_t key, int *pos, RowNode *myNode) {
     if (!myNode) {
-        printf("%d not found in the tree\n", val);
+        printf("%lu not found in the tree\n", key);
         return;
     }
 
     // Find the correct position
-    if (val < myNode->keys[1]) {
+    if (key < myNode->keys[1]) {
         *pos = 0;
     } else {
-        for (*pos = myNode->num_keys; (val < myNode->keys[*pos] && *pos > 1); (*pos)--)
+        for (*pos = myNode->num_keys; (key < myNode->keys[*pos] && *pos > 1); (*pos)--)
             ;
 
         // If found, print a message and return
-        if (val == myNode->keys[*pos]) {
-            printf("%d is found\n", val);
+        if (key == myNode->keys[*pos]) {
+            printf("%lu is found\n", key);
             return;
         }
     }
     
     // If this is a leaf, and we didn't find the value, it's not in the tree
     if (myNode->is_leaf) {
-        printf("%d not found in the tree\n", val);
+        printf("%lu not found in the tree\n", key);
         return;
     }
     
     // Recursively search in the correct subtree
-    search(val, pos, myNode->plink[*pos]);
+    search(key, pos, myNode->plink[*pos]);
 }
 
 // Function to perform an in-order traversal of the B-tree
@@ -228,9 +228,9 @@ void traversal(const struct RowNode *myNode) {
         return;
     }
     
-    printf("Node at page %lu, keys: %d, is_leaf: %s\n", 
-           myNode->page_num, myNode->num_keys, 
-           myNode->is_leaf ? "Yes" : "No");
+    // printf("Node at page %lu, keys: %d, is_leaf: %s\n", 
+    //        myNode->page_num, myNode->num_keys, 
+    //        myNode->is_leaf ? "Yes" : "No");
     
     int i;
     for (i = 0; i < myNode->num_keys; i++) {
@@ -250,7 +250,7 @@ void traversal(const struct RowNode *myNode) {
     // Visit children if they exist
     for (i = 0; i <= myNode->num_keys; i++) {
         if (myNode->plink[i] != NULL) {
-            printf("Traversing to child %d (page %lu):\n", i, myNode->plink[i]->page_num);
+            // printf("Traversing to child %d (page %lu):\n", i, myNode->plink[i]->page_num);
             traversal(myNode->plink[i]);
         }
     }
@@ -431,7 +431,7 @@ void serialize_node(DBFile* db, RowNode* node) {
     for (int i = 0; i <= node->num_keys; i++) {
         if (node->plink[i] != NULL) {
             node->link[i] = node->plink[i]->page_num;
-            printf("%ld %ld\n",node->page_num, node->link[i]);
+            // printf("%ld %ld\n",node->page_num, node->link[i]);
         } else {
             node->link[i] = 0; // Explicitly set to 0 if no child
         }
@@ -486,13 +486,13 @@ void serialize_btree(DBFile* db, RowNode* root, MetadataPage* metadata) {
     serialize_node(db, root);
     serialize_metadata(db, metadata);
     
-    printf("Serialization complete. Total nodes serialized: %d\n", serialized_count);
+    // printf("Serialization complete. Total nodes serialized: %d\n", serialized_count);
 }
 
 // Node deserialization function, modified to use the list of visited nodes
 RowNode* deserialize_node(DBFile* db, uint64_t page_num) {
     // Validate page number
-    if (page_num == 0 || page_num * PAGE_SIZE >= db->size) {
+    if (page_num == 0 || page_num * PAGE_SIZE >= (uint64_t)db->size) {
         return NULL;
     }
     
@@ -560,7 +560,7 @@ RowNode* deserialize_btree(DBFile* db, MetadataPage* metadata) {
     visited_count = 0;
 
     // Check if the file is valid
-    if (db->data == NULL || db->size < sizeof(uint64_t)) {
+    if (db->data == NULL || (uint64_t)db->size < sizeof(uint64_t)) {
         printf("Error: Invalid database file\n");
         return NULL;
     }
@@ -568,7 +568,7 @@ RowNode* deserialize_btree(DBFile* db, MetadataPage* metadata) {
     deserialize_metadata(db, metadata);
 
     // Check if root_page_num is valid
-    if (metadata->root_page_num == 0 || metadata->root_page_num * PAGE_SIZE >= db->size) {
+    if (metadata->root_page_num == 0 || metadata->root_page_num * PAGE_SIZE >= (uint64_t)db->size) {
         printf("Error: Invalid root page number: %lu\n", metadata->root_page_num);
         return NULL;
     }
@@ -583,18 +583,18 @@ RowNode* load_btree_from_disk(DBFile* db, MetadataPage* metadata) {
         printf("Error: Invalid database or metadata\n");
         return NULL;
     }
-    printf("Loading B-tree from disk...\n");
+    // printf("Loading B-tree from disk...\n");
     RowNode* loaded_root = deserialize_btree(db,metadata);
     
-    if (loaded_root == NULL) {
-        printf("Failed to load B-tree from disk\n");
-    } else {
-        printf("Successfully loaded B-tree with root at page %lu\n", loaded_root->page_num);
-        printf("Table name: %s\n", metadata->table_name);
-        printf("Number of columns: %d\n", metadata->num_columns);
-        printf("Total nodes loaded: %d\n", visited_count);
+    // if (loaded_root == NULL) {
+    //     printf("Failed to load B-tree from disk\n");
+    // } else {
+    //     printf("Successfully loaded B-tree with root at page %lu\n", loaded_root->page_num);
+    //     printf("Table name: %s\n", metadata->table_name);
+    //     printf("Number of columns: %d\n", metadata->num_columns);
+    //     printf("Total nodes loaded: %d\n", visited_count);
         
-    }
+    // }
     
     return loaded_root;
 }
@@ -778,18 +778,18 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
 }
 
 // Function to delete a value from a node
-void delete_value(struct RowNode *node, const int val) {
+void delete_value(struct RowNode *node, const uint64_t key) {
     int pos;
 
     // Find position of value in current node
-    if (val < node->keys[1]) {
+    if (key < node->keys[1]) {
         pos = 0;
     } else {
-        for (pos = node->num_keys; (val < node->keys[pos] && pos > 1); pos--);
+        for (pos = node->num_keys; (key < node->keys[pos] && pos > 1); pos--);
     }
 
     // If value is found in this node
-    if (pos <= node->num_keys && val == node->keys[pos]) {
+    if (pos <= node->num_keys && key == node->keys[pos]) {
         // Case 1: If a node is a leaf, remove the value
         if (node->is_leaf) {
             shift_left(node, pos);
@@ -800,7 +800,7 @@ void delete_value(struct RowNode *node, const int val) {
                 root = NULL;
                 return;
             }
-            printf("Value %d deleted from the tree\n", val);
+            printf("Value %lu deleted from the tree\n", key);
             return;
         } 
         // Case 2: If a node is an internal node
@@ -833,13 +833,13 @@ void delete_value(struct RowNode *node, const int val) {
     else {
         // If we've reached a leaf without finding the value, it's not in the tree
         if (node->is_leaf) {
-            printf("Value %d not found in the tree\n", val);
+            printf("Value %lu not found in the tree\n", key);
             return;
         }
         
         // Recursively delete it from the appropriate child
-        delete_value(node->plink[pos], val);
-        
+        delete_value(node->plink[pos], key);
+
         // Check if the child became underfull
         if (node->plink[pos]->num_keys < ROW_MIN_KEYS) {
             handle_underfull_node(node, pos);
@@ -878,5 +878,5 @@ void insert(const uint64_t key, void* data) {
         root = new_root;
     }
 
-    printf("Inserted value %ld, root page: %lu\n", key, root->page_num);
+    // printf("Inserted value %ld, root page: %lu\n", key, root->page_numAA);
 }

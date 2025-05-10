@@ -73,7 +73,7 @@ void write_on_memory_block(DBFile *db, void* new_data, uint64_t page_num);
 void insert_node(const uint64_t key, void* data, const int pos, RowNode *node, RowNode *child);
 void split_node(const uint64_t key, void *data, int *pval, const int pos, struct RowNode *node, struct RowNode *child, struct RowNode **newNode);
 int set_value(const uint64_t key, void* data, int *pval, struct RowNode *node, struct RowNode **child);
-void search(const int val, int *pos, RowNode *myNode);
+void search(const uint64_t key, int *pos, RowNode *myNode);
 void traversal(const struct RowNode *myNode);
 RowNode* find_visited_node(uint64_t page_num);
 void add_visited_node(uint64_t page_num, RowNode* node);
@@ -89,9 +89,10 @@ int find_successor(const struct RowNode *node);
 void shift_left(struct RowNode *node, const int pos);
 int can_spare_key(const struct RowNode *node);
 void handle_underfull_node(struct RowNode *parent, int idx);
-void delete_value(struct RowNode *node, const int val);
+void delete_value(struct RowNode *node, const uint64_t key);
 void delete_value_from_tree(const int val);
 void insert(const uint64_t key, void* data);
+void serialize_metadata(DBFile* db, MetadataPage* metadata);
 
 
 #endif

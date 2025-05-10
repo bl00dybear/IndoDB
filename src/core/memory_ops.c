@@ -2,6 +2,7 @@
 #include "../../include/libraries.h"
 #include "../../include/config.h"
 #include "../../include/data/core_structures.h"
+#include "../../include/core/row_btree_ops.h"
 
 void create_database_file(char file_name[]){
     if (!(~creat(file_name, 0644))) {
@@ -44,11 +45,10 @@ void memory_map_db_file(DBFile* db){
 }
 
 void memory_map_df_file(DataFile* df){
-    df->write_ptr = mmap(NULL, df->size, PROT_READ | PROT_WRITE, MAP_SHARED, df->fd, 0);
-    df->start_ptr = df->write_ptr;
+    df->start_ptr= mmap(NULL, df->size, PROT_READ | PROT_WRITE, MAP_SHARED, df->fd, 0);
     df->write_ptr = BLOCK_SIZE/16;
 
-    if (df->write_ptr == MAP_FAILED) {
+    if (df->start_ptr == MAP_FAILED) {
         perror("Error mapping database file");
         exit(EXIT_FAILURE);
     }
@@ -80,7 +80,7 @@ void init_create_df_memory_block(DataFile* df){
 
 void create_memory_block(DBFile* db) {
     const size_t new_size = db->size + PAGE_SIZE;
-    printf("New size %ld\n", new_size);
+    // printf("New size %ld\n", new_size);
     if (ftruncate(db->fd, new_size) == -1) {
         perror("Error extending file size");
         exit(EXIT_FAILURE);
@@ -97,17 +97,17 @@ void create_memory_block(DBFile* db) {
 }
 
 void write_on_memory_block(DBFile *db, void* new_data, uint64_t page_num){
-    printf("%d\n", db->free_blocks);
+    // printf("%d\n", db->free_blocks);
 
-    while ((page_num+1)*PAGE_SIZE>db->size) {
+while ((page_num+1)*PAGE_SIZE>(uint64_t)db->size) {
         create_memory_block(db);
     }
 
-    printf("Block index %ld\n", page_num);
+    // printf("Block index %ld\n", page_num);
 
     void* page = (char*)db->data + (page_num * PAGE_SIZE);
 
-    printf("%p\n", page);
+    // printf("%p\n", page);
     memcpy(page, new_data, PAGE_SIZE);
     db->dirty = 1;
 }
@@ -126,5 +126,5 @@ void commit_changes_db(DBFile *db, MetadataPage* metadata) {
     }
 
     set_file_dirty_db(db, false);
-    printf("Changes successfully committed to disk.\n");
+    // printf("Changes successfully committed to disk.\n");
 }
