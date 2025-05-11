@@ -24,11 +24,14 @@ RowNode *create_node(const uint64_t key,void *data, RowNode *child) {
     // Set links
     newNode->plink[0] = root;
     newNode->plink[1] = child;
-    
+    if(is_empty(free_page_queue)) {
+        newNode->page_num = 1;    
+    }
+    else{
     // Allocate page number from the free page queue
     newNode->page_num = front(free_page_queue);
     pop(free_page_queue);
-    
+    }
     // Set link values (page numbers)
     if(root != NULL)
         newNode->link[0] = root->page_num;

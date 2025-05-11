@@ -325,10 +325,29 @@ int parse_statement(const char *filename, Statement *stmt) {
     return 0;
 }
 
-void process_statement(Statement *stmt,MetadataPage *metadata) {
+void process_statement(Statement *stmt) {
+    // metadata = malloc(sizeof(MetadataPage));
+    // if (!metadata) {
+    //     perror("Metadata allocation failed");
+    //     exit(1);
+    // }
+    
     switch (stmt->type) {
         case STATEMENT_INSERT: {
-            if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
+            database_init(stmt->insertStmt.table);
+            if (!metadata) {
+                printf("Error: Metadata initialization failed\n");
+                break;
+            }
+            deserialize_metadata(db, metadata);
+
+            printf("metadata->table_name: %s\n", metadata->table_name);
+            printf("metadata ->num_columns: %d\n", metadata->num_columns);
+            printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
+
+
+
+            if(!strcmp(metadata->table_name,stmt->insertStmt.table)) {
                 uint64_t row_size = 0;
                 char* row_content = get_row_content(stmt,&row_size);
                 printf("Row content: %ld\n",row_size);
@@ -348,6 +367,7 @@ void process_statement(Statement *stmt,MetadataPage *metadata) {
             break;
         }
         case STATEMENT_SELECT: {
+            database_init(stmt->selectStmt.table);
             if (!strcmp(stmt -> selectStmt.columns[0],"*")) {
                 if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
                     print_entire_table(root,df,metadata,stmt);
@@ -361,13 +381,91 @@ void process_statement(Statement *stmt,MetadataPage *metadata) {
             break;
         }
         case STATEMENT_CREATE: {
-            
-            set_table_parameters(metadata, stmt);
-            serialize_metadata(db, metadata);
-            
+            database_init(stmt->createStmt.table);
+            printf("Database %s created successfully!\n", stmt->createStmt.table);
 
-            // TODO : create metadata
-            // TODO : create btree
+            set_table_parameters(metadata, stmt);
+            printf("metadata->table_name: %s\n", metadata->table_name);
+            printf("metadata ->num_columns: %d\n", metadata->num_columns);
+            printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
+            serialize_metadata(db, metadata);
+            set_file_dirty_db(db, true);
+            commit_changes_db(db, metadata);
+                      
+
+            break;
+        }
+        case STATEMENT_DROP: {
+            char filepath_db[256] = {0};
+            char filepath_df[256] = {0};
+            
+            // Build database and datafile paths
+            strcpy(filepath_db, DB_FILENAME);
+            strcat(filepath_db, stmt->dropStmt.table);
+            strcat(filepath_db, ".bin");
+            
+            strcpy(filepath_df, DATA_FILENAME);
+            strcat(filepath_df, stmt->dropStmt.table);
+            strcat(filepath_df, ".bin");
+            
+            // Check if the files exist before attempting to delete
+            if (access(filepath_db, F_OK) != 0 || access(filepath_df, F_OK) != 0) {
+                printf("Table '%s' does not exist.\n", stmt->dropStmt.table);
+                break;
+            }
+            
+            // Free current resources if they're loaded
+            if (db) {
+                if (db->data) {
+                    munmap(db->data, db->size);
+                }
+                close(db->fd);
+                free(db);
+                db = NULL;
+            }
+            
+            if (df) {
+                if (df->start_ptr) {
+                    munmap(df->start_ptr, df->size);
+                }
+                close(df->fd);
+                free(df);
+                df = NULL;
+            }
+            
+            if (metadata) {
+                free(metadata);
+                metadata = NULL;
+            }
+            
+            if (free_page_queue) {
+                destroy_queue(free_page_queue);
+                free_page_queue = NULL;
+            }
+            
+            // Reset global values
+            root = NULL;
+            visited_count = 0;
+            serialized_count = 0;
+            global_id = 1;
+            
+            // Try to remove the files
+            int result_db = remove(filepath_db);
+            int result_df = remove(filepath_df);
+            
+            if (result_db == 0 && result_df == 0) {
+                printf("Table '%s' dropped successfully.\n", stmt->dropStmt.table);
+            } else {
+                printf("Error dropping table '%s'. ", stmt->dropStmt.table);
+                if (result_db != 0) {
+                    printf("Database file error\n");
+                }
+                if (result_df != 0) {
+                    printf("Data file error\n");
+                }
+                printf("\n");
+            }
+            
             break;
         }
         // TODO : create table and drop table
@@ -484,13 +582,19 @@ int cli() {
             }
 
             if (stmt != NULL) {
-                process_statement(stmt,metadata);
+                process_statement(stmt);
 
 
                 if (stmt->type == STATEMENT_INSERT) {
                     printf("Parsed an INSERT statement!\n");
                 } else if (stmt->type == STATEMENT_SELECT) {
                     printf("Parsed a SELECT statement!\n");
+                } else if (stmt->type == STATEMENT_CREATE) {
+                    printf("Parsed a CREATE statement!\n");
+                } else if (stmt->type == STATEMENT_DROP) {
+                    printf("Parsed a DROP statement!\n");
+                } else {
+                    printf("Unknown statement type!\n");
                 }
                 free_statement(stmt);
             }else {
@@ -545,9 +649,37 @@ void free_memory(Statement* stmt) {
     global_id = 1;
 }
 
+bool is_database_empty() {
+    typedef struct {
+        uint64_t magic;
+        uint64_t write_ptr_offset;
+    } DataFileHeader;
+
+    DataFileHeader header;
+    memcpy(&header, df->start_ptr, sizeof(header));
+
+    return header.magic != MAGIC_NUMBER;
+}
 
 
-void database_init() {
+
+void database_init(char table_name[]) {
+    db=NULL;
+    df=NULL;
+    metadata=NULL;
+    free_page_queue=NULL;
+    char dbfilepath[256] = {0};
+    strcpy(dbfilepath, DB_FILENAME);
+    strcat(dbfilepath, table_name); 
+    strcat(dbfilepath, ".bin");
+    printf("%s\n\n", dbfilepath);
+
+    char datafilepath[256] = {0};
+    strcpy(datafilepath, DATA_FILENAME);
+    strcat(datafilepath, table_name);
+    strcat(datafilepath, ".bin");
+    printf("%s\n\n", datafilepath);
+
     if(!((db = malloc(sizeof(DBFile))))){
         perror("Memory allocation failed");
         exit(EXIT_FAILURE);
@@ -563,15 +695,17 @@ void database_init() {
         exit(EXIT_FAILURE);
     }
 
-    if(!(~access(DB_FILENAME, F_OK)))
-        create_database_file(DB_FILENAME);
+    if(!(~access(dbfilepath, F_OK)))
+        create_database_file(dbfilepath);
+    
+    
 
-    if(!(~access(DATA_FILENAME, F_OK)))
-        create_database_file(DATA_FILENAME);
-
-    open_database_file(&db->fd,DB_FILENAME);
-    open_database_file(&df->fd,DATA_FILENAME);
-
+    if(!(~access(datafilepath, F_OK)))
+        create_database_file(datafilepath);
+    
+    open_database_file(&db->fd,dbfilepath);
+    open_database_file(&df->fd,datafilepath);
+    
     get_db_file_size(db);
     get_df_file_size(df);
 
@@ -597,29 +731,18 @@ void database_init() {
     for(int i=1;i<=21792;i+=1){
         push(free_page_queue,i);
     }
-}
-
-bool is_database_empty() {
-    typedef struct {
-        uint64_t magic;
-        uint64_t write_ptr_offset;
-    } DataFileHeader;
-
-    DataFileHeader header;
-    memcpy(&header, df->start_ptr, sizeof(header));
-
-    return header.magic != MAGIC_NUMBER;
-}
-
-
-int main() {
-    database_init();
-
-
     if (!is_database_empty()) {
         printf("Database is not empty!\n");
         database_load();
     }
+    else {
+        printf("Database is empty!\n");
+    }
+}
 
+
+
+int main() {
+    
     return cli();
 }
