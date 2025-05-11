@@ -12,6 +12,6 @@ void* get_row_content(Statement *stmt, uint64_t * row_index);
 // void print_entire_table(RowNode *node, DataFile *df, MetadataPage *metadatam,Statement *stmt);
 
 void set_table_parameters(MetadataPage *metadata, Statement *stmt);
-void display_table(RowNode *node, DataFile *df, MetadataPage *metadata,Statement *stmt);
+void display_table(char **columns, int num_columns, MetadataPage *meta, Statement *stmt);
 
 #endif

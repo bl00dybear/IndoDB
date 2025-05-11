@@ -286,7 +286,7 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
 }
 
 
-void print_row_content(void* row_content,  MetadataPage *metadata) {
+void print_row_content(void* row_content, MetadataPage *metadata, int* column_indexes, int num_columns) {
     uint64_t row_size;
     memcpy(&row_size, row_content, sizeof(uint64_t));
 
@@ -298,7 +298,7 @@ void print_row_content(void* row_content,  MetadataPage *metadata) {
 
     uint64_t row_byte_index = 0;
     
-    // Structuri pentru a stoca datele citite
+    // Structura pentru stocare date
     typedef struct {
         int type;
         union {
@@ -308,76 +308,82 @@ void print_row_content(void* row_content,  MetadataPage *metadata) {
         uint32_t str_len;
     } ColumnValue;
     
+    // Citim toate valorile din rând
     ColumnValue values[MAX_COLUMNS];
-    int max_lines = 1;
-    
-    // Prima etapă: citim toate valorile și determinăm numărul de linii necesare
     for (uint64_t col = 0; col < metadata->num_columns; col++) {
         values[col].type = metadata->column_types[col];
         
         switch (values[col].type) {
-        case TYPE_VARCHAR: {
-            uint32_t string_len;
-            memcpy(&string_len, row_content_mem + row_byte_index, sizeof(uint32_t));
-            row_byte_index += sizeof(uint32_t);
+            case TYPE_VARCHAR: {
+                uint32_t string_len;
+                memcpy(&string_len, row_content_mem + row_byte_index, sizeof(uint32_t));
+                row_byte_index += sizeof(uint32_t);
 
-            values[col].str_value = malloc(string_len + 1);
-            memcpy(values[col].str_value, row_content_mem + row_byte_index, string_len);
-            values[col].str_value[string_len] = '\0';
-            values[col].str_len = string_len;
-            row_byte_index += string_len;
-            
-            // Calculăm câte linii avem nevoie pentru acest string
-            int lines_needed = (string_len + 31) / 32; // Rotunjire în sus
-            if (lines_needed > max_lines) {
-                max_lines = lines_needed;
+                values[col].str_value = malloc(string_len + 1);
+                memcpy(values[col].str_value, row_content_mem + row_byte_index, string_len);
+                values[col].str_value[string_len] = '\0';
+                values[col].str_len = string_len;
+                row_byte_index += string_len;
+                break;
             }
-            break;
-        }
-        case TYPE_INT: {
-            memcpy(&values[col].int_value, row_content_mem + row_byte_index, sizeof(int64_t));
-            row_byte_index += sizeof(int64_t);
-            break;
-        }
-        default:
-            values[col].type = -1; // Tip necunoscut
-            break;
+            case TYPE_INT: {
+                memcpy(&values[col].int_value, row_content_mem + row_byte_index, sizeof(int64_t));
+                row_byte_index += sizeof(int64_t);
+                break;
+            }
+            default:
+                values[col].type = -1;
+                break;
         }
     }
     
-    // A doua etapă: afișăm valorile pe mai multe linii
+    // Determinăm numărul de linii necesar pentru afișare
+    int max_lines = 1;
+    for (int i = 0; i < num_columns; i++) {
+        uint64_t col = column_indexes[i];
+        if (values[col].type == TYPE_VARCHAR && values[col].str_len > 0) {
+            int lines_needed = (values[col].str_len + 31) / 32; // Rotunjire în sus
+            if (lines_needed > max_lines) {
+                max_lines = lines_needed;
+            }
+        }
+    }
+    
+    // Afișăm valorile pe mai multe linii
+    int column_width = 20;
     for (int line = 0; line < max_lines; line++) {
         if (line > 0) {
             printf("\n|"); // Începem o linie nouă
         }
         
-        for (uint64_t col = 0; col < metadata->num_columns; col++) {
+        for (int i = 0; i < num_columns; i++) {
+            uint64_t col = column_indexes[i];
             switch (values[col].type) {
-            case TYPE_VARCHAR: {
-                uint32_t start = line * 32;
-                if (start < values[col].str_len) {
-                    uint32_t display_len = ((values[col].str_len - start) > 32) ? 32 : (values[col].str_len - start);
-                    printf(" %-32.*s |", display_len, values[col].str_value + start);
-                } else {
-                    printf(" %-32s |", ""); // Spațiu gol pentru această celulă
+                case TYPE_VARCHAR: {
+                    uint32_t start = line * 20;
+                    if (start < values[col].str_len) {
+                        uint32_t display_len = ((values[col].str_len - start) > 20) ? 20 : (values[col].str_len - start);
+                        printf(" %-*.*s |", column_width, display_len, values[col].str_value + start);
+                    } else {
+                        printf(" %-*s |", column_width, ""); // Spațiu gol
+                    }
+                    break;
                 }
-                break;
-            }
-            case TYPE_INT: {
-                if (line == 0) {
-                    printf(" %-32ld |", values[col].int_value);
-                } else {
-                    printf(" %-32s |", ""); // Spațiu gol pentru rândurile ulterioare
+                case TYPE_INT: {
+                    if (line == 0) {
+                        printf(" %-*ld |", column_width, values[col].int_value);
+                    } else {
+                        printf(" %-*s |", column_width, ""); // Spațiu gol
+                    }
+                    break;
                 }
-                break;
-            }
-            default:
-                if (line == 0) {
-                    printf(" %-32s |", "UNKNOWN");
-                } else {
-                    printf(" %-32s |", "");
-                }
-                break;
+                default:
+                    if (line == 0) {
+                        printf(" %-*s |", column_width, "UNKNOWN");
+                    } else {
+                        printf(" %-*s |", column_width, "");
+                    }
+                    break;
             }
         }
     }
@@ -393,7 +399,7 @@ void print_row_content(void* row_content,  MetadataPage *metadata) {
 }
 
 void print_separator(int num_columns) {
-    int column_width = 32;  // Aceeași lățime ca în display_table_anthet
+    int column_width = 20;  // Aceeași lățime ca în display_table_anthet
     
     for (int i = 0; i < num_columns; i++) {
         printf("+");
@@ -404,23 +410,48 @@ void print_separator(int num_columns) {
     printf("+\n");
 }
 
-void display_table_anthet(MetadataPage *metadata) {
-    int column_width = 32;  // Folosește aceeași lățime pentru toate coloanele
+int* display_table_anthet(char **columns, int num_columns, MetadataPage *meta) {
+    int column_width = 20;  // Folosește aceeași lățime pentru toate coloanele
+
+    int* column_indexes = malloc(num_columns * sizeof(int));
+    
+    if (!column_indexes) {
+        fprintf(stderr, "Memory allocation failed for column indexes\n");
+        return NULL;
+    }
+
+    bool column_found = false;
+    for (int i = 0; i < num_columns; i++) {
+        column_found = false;
+        for (int j = 0; j < meta->num_columns; j++) {
+            if (strcmp(columns[i], meta->column_names[j]) == 0) {
+                column_found = true;
+                column_indexes[i] = j;
+                break;
+            }
+        }
+        if (!column_found) {
+            printf("        Column %s not found in table %s\n", columns[i], meta->table_name);
+            return NULL;
+        }
+    }
 
     printf("\n");
-    print_separator(metadata->num_columns);
+    print_separator(num_columns);
 
-    // Afișează titlurile coloanelor
-    for (uint32_t i = 0; i < metadata->num_columns; i++) {
-        printf("| %-*s ", column_width, metadata->column_names[i]);
+
+    for (uint32_t i = 0; i < num_columns; i++) {
+        printf("| %-*s ", column_width, columns[i]);
     }
     printf("|\n");
 
-    print_separator(metadata->num_columns);
+    print_separator(num_columns);
+
+    return column_indexes;
 }
 
 
-void display_all_rows(RowNode *node, DataFile *df, MetadataPage *metadata, Statement *stmt) {
+void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes, int num_columns) {
     if (node == NULL) {
         return;
     }
@@ -430,25 +461,30 @@ void display_all_rows(RowNode *node, DataFile *df, MetadataPage *metadata, State
         void *row_content = df->start_ptr + offset;
 
         printf("|");
-        print_row_content(row_content,metadata);
+        print_row_content(row_content, metadata, column_indexes, num_columns);
         printf("\n");
         
-        // Adaugă un separator după fiecare rând
-        print_separator(metadata->num_columns);
+        print_separator(num_columns);
     }
 
     for (int i = 0; i <= node->num_keys; i++) {
         if (node->plink[i] != NULL) {
-            display_all_rows(node->plink[i], df, metadata, stmt);
+            display_all_rows(node->plink[i], metadata, column_indexes, num_columns);
         }
     }
 }
 
-void display_table(RowNode *node, DataFile *df, MetadataPage *metadata,Statement *stmt){
-    display_table_anthet(metadata);
+void display_table(char **columns, int num_columns, MetadataPage *meta, Statement *stmt) {
+    int *column_indexes = display_table_anthet(columns, num_columns, meta);
 
-    display_all_rows(node, df, metadata, stmt);
+    if (column_indexes == NULL) {
+        return;
+    }
+    
+    RowNode *node = root;
+    display_all_rows(node, meta, column_indexes, num_columns);
     printf("\n");
+    
 }
 
 

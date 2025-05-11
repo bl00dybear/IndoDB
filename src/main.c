@@ -348,14 +348,20 @@ void process_statement(Statement *stmt,MetadataPage *metadata) {
             break;
         }
         case STATEMENT_SELECT: {
-            if (!strcmp(stmt -> selectStmt.columns[0],"*")) {
-                if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
-                    display_table(root,df,metadata,stmt);
+            
+            if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
+                if (!strcmp(stmt -> selectStmt.columns[0],"*")) {
+                   char *column_pointers[MAX_COLUMNS];
+                    for (int i = 0; i < metadata->num_columns; i++) {
+                        column_pointers[i] = metadata->column_names[i];
+                    }
+
+                    display_table(column_pointers, metadata->num_columns, metadata, stmt);
                 } else {
-                    printf("Table %s not found in database\n", stmt->selectStmt.table);
+                    display_table(stmt->selectStmt.columns, stmt->selectStmt.num_columns, metadata, stmt);
                 }
-            }else {
-             // TODO : select specified columns
+            } else {
+                    printf("Table %s not found in database\n", stmt->selectStmt.table);
             }
 
             break;
@@ -392,7 +398,7 @@ int cli() {
                 line[len - 1] = '\0'; len--;
             }
 
-            if (strcmp(line, "EXIT;") == 0) {
+            if ((strcmp(line, "EXIT;") == 0) || (strcmp(line, "exit;") == 0)) {
                 printf("Exiting IndoDB...\n");
                 fflush(stdout);
                 return 0;
