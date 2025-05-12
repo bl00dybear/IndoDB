@@ -493,7 +493,7 @@ void display_table(char **columns, int num_columns, MetadataPage *meta, Statemen
 void set_table_parameters(MetadataPage *metadata, Statement *stmt) { 
     metadata->root_page_num = 0;   
     metadata->last_table_id = global_id;
-    printf("Setting table parameters...\n");
+    // printf("Setting table parameters...\n");
     metadata->magic = MAGIC_NUMBER;
     metadata->num_columns = stmt->createStmt.num_columns;
     strcpy(metadata->table_name, stmt->createStmt.table);

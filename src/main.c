@@ -341,9 +341,9 @@ void process_statement(Statement *stmt) {
             }
             deserialize_metadata(db, metadata);
 
-            printf("metadata->table_name: %s\n", metadata->table_name);
-            printf("metadata ->num_columns: %d\n", metadata->num_columns);
-            printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
+            // printf("metadata->table_name: %s\n", metadata->table_name);
+            // printf("metadata ->num_columns: %d\n", metadata->num_columns);
+            // printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
 
 
 
@@ -387,13 +387,21 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_CREATE: {
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, stmt->createStmt.table); 
+            strcat(dbfilepath, ".bin");
+            if(access(dbfilepath, F_OK) == 0) {
+                printf("\n      Table '%s' already exists.\n\n", stmt->createStmt.table);
+                break;
+            }
             database_init(stmt->createStmt.table);
-            printf("Database %s created successfully!\n", stmt->createStmt.table);
+            printf("\n        Table %s created successfully!\n\n", stmt->createStmt.table);
 
             set_table_parameters(metadata, stmt);
-            printf("metadata->table_name: %s\n", metadata->table_name);
-            printf("metadata ->num_columns: %d\n", metadata->num_columns);
-            printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
+            // printf("metadata->table_name: %s\n", metadata->table_name);
+            // printf("metadata ->num_columns: %d\n", metadata->num_columns);
+            // printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
             serialize_metadata(db, metadata);
             set_file_dirty_db(db, true);
             commit_changes_db(db, metadata);
@@ -670,13 +678,13 @@ void database_init(char table_name[]) {
     strcpy(dbfilepath, DB_FILENAME);
     strcat(dbfilepath, table_name); 
     strcat(dbfilepath, ".bin");
-    printf("%s\n\n", dbfilepath);
+    // printf("%s\n\n", dbfilepath);
 
     char datafilepath[256] = {0};
     strcpy(datafilepath, DATA_FILENAME);
     strcat(datafilepath, table_name);
     strcat(datafilepath, ".bin");
-    printf("%s\n\n", datafilepath);
+    // printf("%s\n\n", datafilepath);
 
     if(!((db = malloc(sizeof(DBFile))))){
         perror("Memory allocation failed");
@@ -734,7 +742,7 @@ void database_init(char table_name[]) {
         database_load();
     }
     else {
-        printf("Database is empty!\n");
+        // printf("Database is empty!\n");
     }
 }
 

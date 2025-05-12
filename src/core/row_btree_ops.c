@@ -474,7 +474,7 @@ void serialize_node(DBFile* db, RowNode* node) {
 // Modified function for serializing the entire B tree
 void serialize_btree(DBFile* db, RowNode* root, MetadataPage* metadata) {
     if (!root) {
-        printf("Error: Cannot serialize NULL root\n");
+        // printf("Error: Cannot serialize NULL root\n");
         return;
     }
 
