@@ -367,7 +367,32 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_SELECT: {
+            db=NULL;
+            df=NULL;
+            metadata=NULL;
+            free_page_queue=NULL;
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, stmt->selectStmt.table); 
+            strcat(dbfilepath, ".bin");
+            // printf("%s\n\n", dbfilepath);
+
+            char datafilepath[256] = {0};
+            strcpy(datafilepath, DATA_FILENAME);
+            strcat(datafilepath, stmt->selectStmt.table);
+            strcat(datafilepath, ".bin");
+
+            if(!(~access(dbfilepath, F_OK)))
+            {   
+                perror("Database file not found"); 
+                break;
+            }
             
+            if(!(~access(datafilepath, F_OK)))
+            {
+                perror("Data file not found");
+                break;
+            }
             database_init(stmt->selectStmt.table);
             if(!strcmp(metadata->table_name,stmt->selectStmt.table)) {
                 if (!strcmp(stmt -> selectStmt.columns[0],"*")) {
@@ -381,7 +406,7 @@ void process_statement(Statement *stmt) {
                     display_table(stmt->selectStmt.columns, stmt->selectStmt.num_columns, metadata, stmt);
                 }
             } else {
-                    printf("Table %s not found in database\n", stmt->selectStmt.table);
+                    printf("Table %s is empty\n", stmt->selectStmt.table);
             }
 
             break;
@@ -395,13 +420,13 @@ void process_statement(Statement *stmt) {
                 printf("\n      Table '%s' already exists.\n\n", stmt->createStmt.table);
                 break;
             }
+            
+
             database_init(stmt->createStmt.table);
             printf("\n        Table %s created successfully!\n\n", stmt->createStmt.table);
 
             set_table_parameters(metadata, stmt);
-            // printf("metadata->table_name: %s\n", metadata->table_name);
-            // printf("metadata ->num_columns: %d\n", metadata->num_columns);
-            // printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
+
             serialize_metadata(db, metadata);
             set_file_dirty_db(db, true);
             commit_changes_db(db, metadata);
