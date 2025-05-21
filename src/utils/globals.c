@@ -12,6 +12,8 @@ DataFile* df;
 MetadataPage* metadata;
 uint64_t global_id = 1;
 
+char DB_FILENAME[256] = "../databases";
+char DATA_FILENAME[256] = "../databases";
 char *history[MAX_HISTORY];
 int hist_len = 0;
 struct termios orig_termios;

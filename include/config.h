@@ -6,8 +6,8 @@
 #define BLOCK_SIZE PAGE_SIZE
 #define ROW_MAX_KEYS 169
 #define ROW_MIN_KEYS 86
-#define DB_FILENAME "../database/btree"
-#define DATA_FILENAME "../database/data"
+extern char DB_FILENAME[256];
+extern char DATA_FILENAME[256];
 
 #define MAX_VISITED_NODES 100000
 #define MAGIC_NUMBER  0x42444f444E49

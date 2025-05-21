@@ -317,8 +317,50 @@ void serialize_metadata(DBFile* db, MetadataPage* metadata) {
         current = current->next;
     }
     
-    // Write entire metadata page
-    memcpy(db->data, metadata, METADATA_SIZE);
+    // Serializăm câmpurile în ordinea exactă în care apar în structură
+    uint8_t* dest = (uint8_t*)db->data;
+    size_t offset = 0;
+    
+    // 1. magic (8 bytes)
+    memcpy(dest + offset, &metadata->magic, sizeof(metadata->magic));
+    offset += sizeof(uint64_t);
+    
+    // 2. root_page_num (8 bytes)
+    memcpy(dest + offset, &metadata->root_page_num, sizeof(metadata->root_page_num));
+    offset += sizeof(uint64_t);
+    
+    // 3. last_table_id (8 bytes)
+    memcpy(dest + offset, &metadata->last_table_id, sizeof(metadata->last_table_id));
+    offset += sizeof(uint64_t);
+    
+    // 4. table_name (64 bytes)
+    memcpy(dest + offset, metadata->table_name, MAX_TABLE_NAME);
+    offset += MAX_TABLE_NAME;
+    
+    // 5. num_columns (4 bytes)
+    memcpy(dest + offset, &metadata->num_columns, sizeof(metadata->num_columns));
+    offset += sizeof(uint32_t);
+    
+    // 6. column_names (1024 bytes)
+    memcpy(dest + offset, metadata->column_names, MAX_COLUMNS * MAX_COLUMN_NAME);
+    offset += MAX_COLUMNS * MAX_COLUMN_NAME;
+    
+    // 7. column_types (128 bytes)
+    memcpy(dest + offset, metadata->column_types, sizeof(ColumnType) * MAX_COLUMNS);
+    offset += sizeof(ColumnType) * MAX_COLUMNS;
+    
+    // 8. column_constraints (128 bytes)
+    memcpy(dest + offset, metadata->column_constraints, sizeof(ConstraintType) * MAX_COLUMNS);
+    offset += sizeof(ConstraintType) * MAX_COLUMNS;
+    
+    // 9. column_sizes (128 bytes)
+    memcpy(dest + offset, metadata->column_sizes, sizeof(uint32_t) * MAX_COLUMNS);
+    offset += sizeof(uint32_t) * MAX_COLUMNS;
+    
+    // 10. free_page_bitmap (2596 bytes)
+    size_t bitmap_size = METADATA_SIZE - 8 - 8 - 8 - 64 - 4 - 1024 - 128 - 128 - 128;
+    memcpy(dest + offset, metadata->free_page_bitmap, bitmap_size);
+    
 }
 
 void deserialize_metadata(DBFile* db, MetadataPage* metadata) {

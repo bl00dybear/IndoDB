@@ -32,7 +32,7 @@ set_target_properties(indodb PROPERTIES
 )
 
 # Creează directoarele necesare pentru baza de date
-file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/database")
+file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/databases")
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/output")
 
 # Găsește Cabal pentru compilare
@@ -115,5 +115,5 @@ endif()
 # Comandă post-build pentru a verifica dacă există fișierele de bază de date
 add_custom_command(TARGET indodb POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "Checking database directory structure..."
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_SOURCE_DIR}/database"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_SOURCE_DIR}/databases"
 )

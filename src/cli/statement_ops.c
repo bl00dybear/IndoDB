@@ -1,13 +1,13 @@
 #include "../include/cli/statement_ops.h"
 
 void process_statement(Statement *stmt) {
-    // metadata = malloc(sizeof(MetadataPage));
-    // if (!metadata) {
-    //     perror("Metadata allocation failed");
-    //     exit(1);
-    // }
+
     switch (stmt->type) {
         case STATEMENT_INSERT: {
+            if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
+                printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
+                break;
+            }
             database_init(stmt->insertStmt.table);
             if (!metadata) {
                 printf("Error: Metadata initialization failed\n");
@@ -43,18 +43,24 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_SELECT: {
+            if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
+                printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
+                break;
+            }
             db=NULL;
             df=NULL;
             metadata=NULL;
             free_page_queue=NULL;
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, "/btree");
             strcat(dbfilepath, stmt->selectStmt.table); 
             strcat(dbfilepath, ".bin");
             // printf("%s\n\n", dbfilepath);
 
             char datafilepath[256] = {0};
             strcpy(datafilepath, DATA_FILENAME);
+            strcat(datafilepath, "/data");
             strcat(datafilepath, stmt->selectStmt.table);
             strcat(datafilepath, ".bin");
 
@@ -88,10 +94,16 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_CREATE: {
+            if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
+                printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
+                break;
+            }
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, "/btree");
             strcat(dbfilepath, stmt->createStmt.table); 
             strcat(dbfilepath, ".bin");
+            printf("%s\n", dbfilepath);
             if(access(dbfilepath, F_OK) == 0) {
                 printf("Error: Table '%s' already exists.\n", stmt->createStmt.table);
                 break;
@@ -111,15 +123,21 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_DROP: {
+            if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
+                printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
+                break;
+            }
             char filepath_db[256] = {0};
             char filepath_df[256] = {0};
             
             // Build database and datafile paths
             strcpy(filepath_db, DB_FILENAME);
+            strcat(filepath_db, "/btree");
             strcat(filepath_db, stmt->dropStmt.table);
             strcat(filepath_db, ".bin");
             
-            strcpy(filepath_df, DATA_FILENAME);
+            strcpy(filepath_df, DB_FILENAME);
+            strcat(filepath_df, "/data");
             strcat(filepath_df, stmt->dropStmt.table);
             strcat(filepath_df, ".bin");
             
@@ -184,33 +202,72 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_CREATE_DB: {
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, "../databases");
+            strcat(dbfilepath, "/");
+            strcat(dbfilepath, stmt->createDbStmt.database);
+
+            if(access(dbfilepath, F_OK) == 0) {
+                printf("Error: Database '%s' already exists.\n", stmt->createDbStmt.database);
+                break;
+            }
+            if(mkdir(dbfilepath, 0777) == -1) {
+                perror("Error creating database directory");
+                break;
+            }
+
             
             break;
         }
         case STATEMENT_DROP_DB: {
+
             char dbfilepath[256] = {0};
-            strcpy(dbfilepath, DB_FILENAME);
-            strcat(dbfilepath, stmt->dropDbStmt.database); 
-            strcat(dbfilepath, ".bin");
+            strcpy(dbfilepath, "../databases");
+            strcat(dbfilepath, "/");
+            strcat(dbfilepath, stmt->dropDbStmt.database);
+
+            if(strcmp(DB_FILENAME, dbfilepath) == 0) {
+                strcpy(DB_FILENAME, "../databases");
+            }
+
+            // Verifică dacă directorul există
             if(access(dbfilepath, F_OK) != 0) {
                 printf("Error: Database '%s' does not exist.\n", stmt->dropDbStmt.database);
                 break;
             }
-            remove(dbfilepath);
-            printf("Database %s dropped successfully!\n", stmt->dropDbStmt.database);
+            
+            // Șterge directorul și conținutul său recursiv
+            char rm_command[512];
+            snprintf(rm_command, sizeof(rm_command), "rm -rf \"%s\"", dbfilepath);
+            
+            if(system(rm_command) != 0) {
+                perror("Error deleting database directory");
+                break;
+            }
+            
+            printf("Database '%s' dropped successfully!\n", stmt->dropDbStmt.database);
             break;
         }
         case STATEMENT_USE_DB: {
+
             char dbfilepath[256] = {0};
-            strcpy(dbfilepath, DB_FILENAME);
-            strcat(dbfilepath, stmt->useDbStmt.database); 
-            strcat(dbfilepath, ".bin");
+            strcpy(dbfilepath, "../databases/");
+            strcat(dbfilepath, stmt->useDbStmt.database);
+
+            // Verifică dacă directorul există
             if(access(dbfilepath, F_OK) != 0) {
                 printf("Error: Database '%s' does not exist.\n", stmt->useDbStmt.database);
                 break;
             }
-            database_init(stmt->useDbStmt.database);
-            printf("Database %s selected successfully!\n", stmt->useDbStmt.database);
+            
+            // Actualizează variabilele globale de cale
+            strcpy(DB_FILENAME, "../databases/");
+            strcat(DB_FILENAME, stmt->useDbStmt.database);
+            
+            strcpy(DATA_FILENAME, "../databases/");
+            strcat(DATA_FILENAME, stmt->useDbStmt.database);
+            
+            printf("Database changed to '%s'\n", stmt->useDbStmt.database);
             break;
         }
         default: break;
