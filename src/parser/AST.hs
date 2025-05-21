@@ -11,6 +11,7 @@ data SQLValue
     | SQLInt Int
     | SQLFloat Float
     | SQLDate String
+    | SQLBool Bool
     deriving (Show, Generic)
 
 instance ToJSON SQLValue where
@@ -18,12 +19,14 @@ instance ToJSON SQLValue where
     toJSON (SQLInt i) = object ["valueType" .= ("Int" :: String), "value" .= i]
     toJSON (SQLFloat f) = object ["valueType" .= ("Float" :: String), "value" .= f]
     toJSON (SQLDate d) = object ["valueType" .= ("Date" :: String), "value" .= d]
+    toJSON (SQLBool b) = object ["valueType" .= ("Bool" :: String), "value" .= b]
 
-data ConstraintType = NotNull | PrimaryKey | ForeignKey
+data ConstraintType = NotNull | Unique | PrimaryKey | ForeignKey
     deriving (Show, Generic)
 
 instance ToJSON ConstraintType where
     toJSON NotNull = "NotNull"
+    toJSON Unique = "Unique"
     toJSON PrimaryKey = "PrimaryKey"
     toJSON ForeignKey = "ForeignKey"
 
@@ -32,6 +35,7 @@ data DataType
     | FloatType
     | VarCharType Int
     | DateType
+    | BoolType
     deriving (Show, Generic)
 
 instance ToJSON DataType where
@@ -39,25 +43,24 @@ instance ToJSON DataType where
     toJSON FloatType = "Float"
     toJSON (VarCharType n) = object ["type" .= ("String" :: String), "length" .= n]
     toJSON DateType = "Date"
+    toJSON BoolType = "Bool"
 
 data SQLStatement
-    = SelectStmt [String] String (Maybe Condition)
-    | CreateStmt String [(String, DataType, Maybe ConstraintType)]
+    = CreateStmt String [(String, DataType, Maybe ConstraintType)]
     | InsertStmt String (Maybe [String]) [SQLValue]
-    | UpdateStmt String [(String, String)] (Maybe Condition)
     | DropStmt String
+    | SelectStmt [String] String (Maybe Condition)
+    | UpdateStmt String [(String, String)] (Maybe Condition)
+    | DeleteStmt String (Maybe Condition)
     | CreateDbStmt String
     | DropDbStmt String
-    | DeleteStmt String (Maybe Condition)
+    | UseDbStmt String
+    | ShowDbStmt
+    | ShowTbStmt
+    | DescTbStmt String
     deriving (Show, Generic)
 
 instance ToJSON SQLStatement where
-    toJSON (SelectStmt cols table cond) = object
-        [ "statement" .= ("SelectStmt" :: String)
-        , "table" .= table
-        , "columns" .= cols
-        , "condition" .= cond
-        ]
     toJSON (CreateStmt table cols) = object
         [ "statement" .= ("CreateStmt" :: String)
         , "table" .= table
@@ -69,15 +72,26 @@ instance ToJSON SQLStatement where
         , "columns" .= cols
         , "values" .= values
         ]
+    toJSON (DropStmt table) = object
+        [ "statement" .= ("DropStmt" :: String)
+        , "table" .= table
+        ]
+    toJSON (SelectStmt cols table cond) = object
+        [ "statement" .= ("SelectStmt" :: String)
+        , "table" .= table
+        , "columns" .= cols
+        , "condition" .= cond
+        ]
     toJSON (UpdateStmt table updates cond) = object
         [ "statement" .= ("UpdateStmt" :: String)
         , "table" .= table
         , "updates" .= map (\(col, val) -> object ["column" .= col, "value" .= val]) updates
         , "condition" .= cond
         ]
-    toJSON (DropStmt table) = object
-        [ "statement" .= ("DropStmt" :: String)
+    toJSON (DeleteStmt table cond) = object
+        [ "statement" .= ("DeleteStmt" :: String)
         , "table" .= table
+        , "condition" .= cond
         ]
     toJSON (CreateDbStmt name) = object
         [  "statement" .=("CreateDbStmt" :: String)
@@ -87,12 +101,21 @@ instance ToJSON SQLStatement where
         [  "statement" .=("DropDbStmt" :: String)
         ,  "database" .= name
         ]
-    toJSON (DeleteStmt table cond) = object
-        [ "statement" .= ("DeleteStmt" :: String)
-        , "table" .= table
-        , "condition" .= cond
+    toJSON (UseDbStmt name) = object
+        [ "statement" .=("UseDbStmt" :: String)
+        ,  "database" .= name
         ]
-        
+    toJSON ShowDbStmt = object
+        [ "statement" .=("ShowDbStmt" :: String)
+        ]
+    toJSON ShowTbStmt = object
+        [ "statement" .=("ShowTbStmt" :: String)
+        ]
+    toJSON (DescTbStmt name) = object
+        [ "statement" .=("DescTbStmt" :: String)
+        ,  "table" .= name
+        ]
+
 data Condition
     = Equals String SQLValue
     | NotEquals String SQLValue

@@ -1,16 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <$>" #-}
+{-# HLINT ignore "Use camelCase" #-}
 
 module Utils where
 
 import Text.Parsec
 import Text.Parsec.String (Parser)
-import Control.Monad ( void, zipWithM)
+import Control.Monad (void, zipWithM)
 import Data.Functor (($>))
-import Data.Char (toLower, toUpper)
+import Data.Char (toLower)
+import Data.Maybe (listToMaybe, mapMaybe)
 
 import AST
+import AST (ConstraintType(Unique), SQLValue)
 
 lexeme :: Parser a -> Parser a
 lexeme p = spaces *> p <* spaces
@@ -20,14 +23,15 @@ identifier = lexeme (many1 (letter <|> digit <|> char '_'))
 
 stringCI :: String -> Parser String
 stringCI s = try $ do
-    let matchChar target input = if toLower target == toLower input then return input else fail "Case-insensitive match failed"
+    let matchChar target input = if toLower target == toLower input then return input else fail "Error: Invalid SQL Statement"
     zipWithM matchChar s =<< count (length s) anyChar
 
 parseValue :: Parser SQLValue
 parseValue = lexeme (try parseDate
          <|> try parseFloat
          <|> try parseInt
-         <|> try parseString)
+         <|> try parseString
+         <|> try parseBool)
 
 parseString :: Parser SQLValue
 parseString = lexeme $ do
@@ -56,24 +60,31 @@ parseDate = lexeme $ do
     char '\''
     return $ SQLDate (day ++ "-" ++ month ++ "-" ++ year)
 
+parseBool :: Parser SQLValue
+parseBool = lexeme $
+    (try (stringCI "true") $> SQLBool True)
+    <|> (try (stringCI "false") $> SQLBool False)
+
 parseConstraint :: Parser ConstraintType
 parseConstraint = lexeme $ choice
-    [ try (string "PRIMARY KEY" $> PrimaryKey)
-    , try (string "FOREIGN KEY" $> ForeignKey)
-    , try (string "NOT NULL" $> NotNull)
+    [ try (stringCI "PRIMARY KEY" $> PrimaryKey)
+    , try (stringCI "FOREIGN KEY" $> ForeignKey)
+    , try (stringCI "NOT NULL" $> NotNull)
+    , try (stringCI "UNIQUE" $> Unique)
     ]
 
 parseDataType :: Parser DataType
 parseDataType = lexeme $ choice
-    [ try (string "INT" $> IntType)
-    , try (string "FLOAT" $> FloatType)
+    [ try (stringCI "INT" $> IntType)
+    , try (stringCI "FLOAT" $> FloatType)
     , try parseVarChar
-    , try (string "DATE" $> DateType)
+    , try (stringCI "DATE" $> DateType)
+    , try (stringCI "BOOL" $> BoolType)
     ]
 
 parseVarChar :: Parser DataType
 parseVarChar = lexeme $ do
-    void $ string "VARCHAR"
+    void $ stringCI "VARCHAR"
     size <- between (char '(') (char ')') (read <$> many1 digit)
     if size > 0 && size <= 255
         then return (VarCharType size)
@@ -120,7 +131,7 @@ parseComparison = do
     return (op col val)
 
 andOperator :: Parser (Condition -> Condition -> Condition)
-andOperator = lexeme (string "AND") $> And
+andOperator = lexeme (stringCI "AND") $> And
 
 orOperator :: Parser (Condition -> Condition -> Condition)
-orOperator = lexeme (string "OR") $> Or
+orOperator = lexeme (stringCI "OR") $> Or

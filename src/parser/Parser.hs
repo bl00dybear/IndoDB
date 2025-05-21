@@ -12,15 +12,6 @@ import Data.Char (toLower)
 import AST
 import Utils
 
-parseSelect :: Parser SQLStatement
-parseSelect = lexeme $ do
-    void $ lexeme (stringCI "select")
-    cols <- try (lexeme (string "*") $> ["*"]) <|> sepBy identifier (lexeme (char ','))
-    void $ lexeme (stringCI "from")
-    table <- identifier
-    cond <- optionMaybe parseWhere
-    return $ SelectStmt cols table cond
-
 parseCreate :: Parser SQLStatement
 parseCreate = lexeme $ do
     void $ lexeme (stringCI "create")
@@ -43,6 +34,21 @@ parseInsert = lexeme $ do
             fail "Error: Number of columns does not match number of values."
         _ -> return $ InsertStmt table cols values
 
+parseDrop :: Parser SQLStatement
+parseDrop = lexeme $ do
+    void $ lexeme (stringCI "drop")
+    void $ lexeme (stringCI "table")
+    DropStmt <$> identifier
+
+parseSelect :: Parser SQLStatement
+parseSelect = lexeme $ do
+    void $ lexeme (stringCI "select")
+    cols <- try (lexeme (string "*") $> ["*"]) <|> sepBy identifier (lexeme (char ','))
+    void $ lexeme (stringCI "from")
+    table <- identifier
+    cond <- optionMaybe parseWhere
+    return $ SelectStmt cols table cond
+
 parseUpdate :: Parser SQLStatement
 parseUpdate = lexeme $ do
     void $ lexeme (stringCI "update")
@@ -52,11 +58,13 @@ parseUpdate = lexeme $ do
     cond <- optionMaybe parseWhere
     return $ UpdateStmt table updates cond
 
-parseDrop :: Parser SQLStatement
-parseDrop = lexeme $ do
-    void $ lexeme (stringCI "drop")
-    void $ lexeme (stringCI "table")
-    DropStmt <$> identifier
+parseDelete :: Parser SQLStatement
+parseDelete = lexeme $ do
+    void $ lexeme (stringCI "delete")
+    void $ lexeme (stringCI "from")
+    table <- identifier
+    cond <- optionMaybe parseWhere
+    return $ DeleteStmt table cond
 
 parseCreateDb :: Parser SQLStatement
 parseCreateDb = lexeme $ do
@@ -70,13 +78,29 @@ parseDropDb = lexeme $ do
     void $ lexeme (stringCI "database")
     DropDbStmt <$> identifier
 
-parseDelete :: Parser SQLStatement
-parseDelete = lexeme $ do
-    void $ lexeme (stringCI "delete")
-    void $ lexeme (stringCI "from")
-    table <- identifier
-    cond <- optionMaybe parseWhere
-    return $ DeleteStmt table cond
+parseUseDb :: Parser SQLStatement
+parseUseDb = lexeme $ do
+    void $ lexeme (stringCI "use")
+    void $ lexeme (stringCI "database")
+    UseDbStmt <$> identifier
+
+parseShowDb :: Parser SQLStatement
+parseShowDb = lexeme $ do
+    void $ lexeme (stringCI "show")
+    void $ lexeme (stringCI "databases")
+    return ShowDbStmt
+
+parseShowTb :: Parser SQLStatement
+parseShowTb = lexeme $ do
+    void $ lexeme (stringCI "show")
+    void $ lexeme (stringCI "tables")
+    return ShowTbStmt
+
+parseDescTb :: Parser SQLStatement
+parseDescTb = lexeme $ do
+    void $ lexeme (stringCI "describe")
+    void $ lexeme (stringCI "table")
+    DescTbStmt <$> identifier
 
 parseWhere :: Parser Condition
 parseWhere = lexeme $ do
@@ -85,13 +109,17 @@ parseWhere = lexeme $ do
 
 parseSQL :: Parser SQLStatement
 parseSQL = lexeme $ do
-    stmt <- try parseSelect
-        <|> try parseCreate
+    stmt <- try parseCreate
         <|> try parseInsert
-        <|> try parseUpdate
         <|> try parseDrop
+        <|> try parseSelect
+        <|> try parseUpdate
+        <|> parseDelete
         <|> try parseCreateDb
         <|> try parseDropDb
-        <|> parseDelete
+        <|> try parseUseDb
+        <|> try parseShowDb
+        <|> try parseShowTb
+        <|> try parseDescTb
     _ <- lexeme (char ';')
     return stmt
