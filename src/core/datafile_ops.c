@@ -182,49 +182,18 @@ void load_datafile(DataFile* df) {
         fprintf(stderr, "Error: Failed to deserialize data file\n");
         return;
     }
-    // printf("Data file loaded successfully.\n");
-    // printf("Write pointer offset: %p\n", df->write_ptr);
 }
 
-int string_to_int(const char* str) {
-    if (str == NULL) {
-        return 0;
-    }
-
-    int result = 0;
-    int sign = 1;
-    int i = 0;
-
-    if (str[0] == '-') {
-        sign = -1;
-        i = 1;
-    } else if (str[0] == '+') {
-        i = 1;
-    }
-
-    while (str[i] != '\0') {
-        if (str[i] >= '0' && str[i] <= '9') {
-            if (result > INT_MAX / 10 ||
-                (result == INT_MAX / 10 && str[i] - '0' > INT_MAX % 10)) {
-                return (sign == 1) ? INT_MAX : INT_MIN;
-                }
-
-            result = result * 10 + (str[i] - '0');
-        } else {
-            break;
-        }
-        i++;
-    }
-
-    return result * sign;
-}
 
 
 void serialize_int(Statement *stmt,void*row_content,uint64_t *row_index,uint64_t index) {
-    int64_t value = string_to_int(stmt->insertStmt.values[index].value);
+    int64_t value = strtoll(stmt->insertStmt.values[index].value, NULL, 10);
     void* row_content_int = malloc(sizeof(int64_t));
 
     *(int64_t*)row_content_int = value;
+
+
+
     memcpy(row_content + (*row_index), row_content_int, sizeof(int64_t));
 
     *row_index += sizeof(int64_t);
@@ -252,7 +221,7 @@ void serialize_string(Statement *stmt,void*row_content,uint64_t *row_index,uint6
 }
 
 void set_row_flag(void* row_content,bool flag) {
-    memccpy(row_content+8 , &flag, sizeof(bool), 1);
+    memcpy(row_content+8 , &flag, sizeof(bool));
 }
 
 void set_row_size(void* row_content,uint64_t size) {
@@ -342,7 +311,7 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
     for (int i = 0; i < num_columns; i++) {
         uint64_t col = column_indexes[i];
         if (values[col].type == TYPE_VARCHAR && values[col].str_len > 0) {
-            int lines_needed = (values[col].str_len + 31) / 32; // Rotunjire în sus
+            int lines_needed = (values[col].str_len + 19) / 20; // Rotunjire în sus
             if (lines_needed > max_lines) {
                 max_lines = lines_needed;
             }
@@ -468,7 +437,7 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
     }
 
     for (int i = 0; i <= node->num_keys; i++) {
-        if (node->plink[i] != NULL) {
+        if (node->plink != NULL && node->plink[i] != NULL) {
             display_all_rows(node->plink[i], metadata, column_indexes, num_columns);
         }
     }
@@ -484,7 +453,8 @@ void display_table(char **columns, int num_columns, MetadataPage *meta, Statemen
     RowNode *node = root;
     display_all_rows(node, meta, column_indexes, num_columns);
     printf("\n");
-    
+
+    free(column_indexes);
 }
 
 
