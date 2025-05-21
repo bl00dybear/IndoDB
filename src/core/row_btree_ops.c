@@ -360,22 +360,6 @@ void serialize_metadata(DBFile* db, MetadataPage* metadata) {
     // 10. free_page_bitmap (2596 bytes)
     size_t bitmap_size = METADATA_SIZE - 8 - 8 - 8 - 64 - 4 - 1024 - 128 - 128 - 128;
     memcpy(dest + offset, metadata->free_page_bitmap, bitmap_size);
-
-    //afisam intreaga structura
-    printf("Serialized metadata: \n");
-    printf("magic: %lu\n", metadata->magic);
-    printf("root_page_num: %lu\n", metadata->root_page_num);
-    printf("last_table_id: %lu\n", metadata->last_table_id);
-    printf("table_name: %s\n", metadata->table_name);
-    printf("num_columns: %u\n", metadata->num_columns);
-    for (int i = 0; i < metadata->num_columns; i++) {
-        printf("column_names[%d]: %s\n", i, metadata->column_names[i]);
-        printf("column_types[%d]: %d\n", i, metadata->column_types[i]);
-        printf("column_constraints[%d]: %d\n", i, metadata->column_constraints[i]);
-        printf("column_sizes[%d]: %u\n", i, metadata->column_sizes[i]);
-    }
-
-
     
 }
 

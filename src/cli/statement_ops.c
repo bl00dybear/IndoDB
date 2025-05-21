@@ -100,9 +100,10 @@ void process_statement(Statement *stmt) {
             }
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, DB_FILENAME);
-            strcpy(dbfilepath, "/btree");
+            strcat(dbfilepath, "/btree");
             strcat(dbfilepath, stmt->createStmt.table); 
             strcat(dbfilepath, ".bin");
+            printf("%s\n", dbfilepath);
             if(access(dbfilepath, F_OK) == 0) {
                 printf("Error: Table '%s' already exists.\n", stmt->createStmt.table);
                 break;
@@ -131,10 +132,12 @@ void process_statement(Statement *stmt) {
             
             // Build database and datafile paths
             strcpy(filepath_db, DB_FILENAME);
+            strcat(filepath_db, "/btree");
             strcat(filepath_db, stmt->dropStmt.table);
             strcat(filepath_db, ".bin");
             
-            strcpy(filepath_df, DATA_FILENAME);
+            strcpy(filepath_df, DB_FILENAME);
+            strcat(filepath_df, "/data");
             strcat(filepath_df, stmt->dropStmt.table);
             strcat(filepath_df, ".bin");
             
