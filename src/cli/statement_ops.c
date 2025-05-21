@@ -280,7 +280,11 @@ void verify_constraints(Statement *stmt, MetadataPage *metadata) {
                 return;
             }
         } else if (metadata->column_constraints[i] == CONSTRAINT_UNIQUE) {
-            
+            bool is_unique = constraint_unique(root, stmt, metadata, i);
+            if (!is_unique) {
+                printf("Error: Column %s must be unique\n", metadata->column_names[i]);
+                return;
+            }
         } else if (metadata->column_constraints[i] == CONSTRAINT_PRIMARY_KEY) {
             // Check for primary key constraints
             // This is a placeholder, implement your own logic to check for primary key constraints

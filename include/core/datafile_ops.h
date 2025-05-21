@@ -14,4 +14,6 @@ void* get_row_content(Statement *stmt, uint64_t * row_index);
 void set_table_parameters(MetadataPage *metadata, Statement *stmt);
 void display_table(char **columns, int num_columns, MetadataPage *meta, Statement *stmt);
 
+bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int column_index);
+
 #endif

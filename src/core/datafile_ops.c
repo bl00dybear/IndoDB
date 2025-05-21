@@ -238,7 +238,7 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
 
     // printf("\n Num of val %ld\n", stmt->insertStmt.num_values);
 
-    for (uint64_t index = 0; index < (uint64_t)stmt->insertStmt.num_values; index++) {
+    for (uint64_t index = 0; index < (uint64_t)stmt->insertStmt.num_values; index+=1) {
         // printf("%ld\n", index);
         if (strcmp(stmt->insertStmt.values[index].valueType,"Int") == 0) {
             serialize_int(stmt,row_content,row_index,index);
@@ -286,7 +286,6 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
 
     uint64_t row_byte_index = 0;
     
-    // Structura pentru stocare date
     typedef struct {
         int type;
         union {
@@ -300,13 +299,13 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
     ColumnValue values[MAX_COLUMNS];
     
     // Inițializare pentru eliberare de memorie în caz de eroare
-    for (uint64_t col = 0; col < metadata->num_columns; col++) {
+    for (uint64_t col = 0; col < metadata->num_columns; col+=1) {
         values[col].type = -1;
         values[col].str_value = NULL;
     }
     
     // Citire date cu verificări de limitare
-    for (uint64_t col = 0; col < metadata->num_columns; col++) {
+    for (uint64_t col = 0; col < metadata->num_columns; col+=1) {
         values[col].type = metadata->column_types[col];
         
         // Verificare depășire buffer
@@ -365,7 +364,7 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
     
     // Determinăm numărul de linii necesar pentru afișare cu verificarea indicilor coloanelor
     int max_lines = 1;
-    for (int i = 0; i < num_columns; i++) {
+    for (int i = 0; i < num_columns; i+=1) {
         uint64_t col = column_indexes[i];
         
         // Verificare index valid
@@ -384,12 +383,12 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
     
     // Afișăm valorile pe mai multe linii
     int column_width = 20;
-    for (int line = 0; line < max_lines; line++) {
+    for (int line = 0; line < max_lines; line+=1) {
         if (line > 0) {
             printf("\n|"); // Începem o linie nouă
         }
         
-        for (int i = 0; i < num_columns; i++) {
+        for (int i = 0; i < num_columns; i+=1) {
             uint64_t col = column_indexes[i];
             
             // Verificare index valid
@@ -435,7 +434,7 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
     
 cleanup:
     // Eliberăm memoria alocată pentru string-uri
-    for (uint64_t col = 0; col < metadata->num_columns; col++) {
+    for (uint64_t col = 0; col < metadata->num_columns; col+=1) {
         if (values[col].type == TYPE_VARCHAR && values[col].str_value != NULL) {
             free(values[col].str_value);
             values[col].str_value = NULL;
@@ -451,9 +450,9 @@ cleanup:
 void print_separator(int num_columns) {
     int column_width = 20;  // Aceeași lățime ca în display_table_anthet
     
-    for (int i = 0; i < num_columns; i++) {
+    for (int i = 0; i < num_columns; i+=1) {
         printf("+");
-        for (int j = 0; j < column_width + 2; j++) {
+        for (int j = 0; j < column_width + 2; j+=1) {
             printf("-");
         }
     }
@@ -471,9 +470,9 @@ int* display_table_anthet(char **columns, int num_columns, MetadataPage *meta) {
     }
 
     bool column_found = false;
-    for (int i = 0; i < num_columns; i++) {
+    for (int i = 0; i < num_columns; i+=1) {
         column_found = false;
-        for (uint32_t j = 0; j < meta->num_columns; j++) {
+        for (uint32_t j = 0; j < meta->num_columns; j+=1) {
             if (strcmp(columns[i], meta->column_names[j]) == 0) {
                 column_found = true;
                 column_indexes[i] = j;
@@ -490,7 +489,7 @@ int* display_table_anthet(char **columns, int num_columns, MetadataPage *meta) {
     print_separator(num_columns);
 
 
-    for (int i = 0; i < num_columns; i++) {
+    for (int i = 0; i < num_columns; i+=1) {
         printf("| %-*s ", column_width, columns[i]);
     }
     printf("|\n");
@@ -507,11 +506,11 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
     }
     
     // Verificăm nodurile duplicate pentru a evita cicluri infinite
-    static void* visited_nodes[1000] = {0};  // Stocăm ultimele 1000 noduri vizitate
+    static void* visited_nodes[MAX_VISITED_NODES] = {0};  // Stocăm ultimele 1000 noduri vizitate
     static int visited_count = 0;
     
     // Verifică dacă nodul a fost deja vizitat
-    for (int v = 0; v < visited_count; v++) {
+    for (int v = 0; v < visited_count; v+=1) {
         if (visited_nodes[v] == node) {
             // Am detectat un ciclu, oprim traversarea
             return;
@@ -519,16 +518,16 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
     }
     
     // Adaugă nodul la lista de noduri vizitate
-    if (visited_count < 1000) {
-        visited_nodes[visited_count++] = node;
+    if (visited_count < MAX_VISITED_NODES) {
+        visited_nodes[visited_count+=1] = node;
     } else {
         // Resetăm array-ul dacă depășim limita
         visited_count = 0;
-        visited_nodes[visited_count++] = node;
+        visited_nodes[visited_count+=1] = node;
     }
 
     // Afișează rândurile din nodul curent
-    for (int i = 1; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
+    for (int i = 1; i <= node->num_keys && i < ROW_MAX_KEYS; i+=1) {
         uint64_t offset = (uint64_t)node->raw_data[i];
         
         // Verifică dacă offsetul e valid
@@ -557,7 +556,7 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
 
     // Traversează recursiv nodurile copil, cu verificări de siguranță
     if (node->plink != NULL) {
-        for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
+        for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i+=1) {
             if (node->plink[i] != NULL) {
                 // Verificări suplimentare de validitate
                 if ((uintptr_t)node->plink[i] < 1000 || 
@@ -602,7 +601,7 @@ void set_table_parameters(MetadataPage *metadata, Statement *stmt) {
     metadata->magic = MAGIC_NUMBER;
     metadata->num_columns = stmt->createStmt.num_columns;
     strcpy(metadata->table_name, stmt->createStmt.table);
-    for (int i = 0; i < stmt->createStmt.num_columns; i++) {
+    for (int i = 0; i < stmt->createStmt.num_columns; i+=1) {
 
         strcpy(metadata->column_names[i], stmt->createStmt.columns[i].column_name);
         metadata->column_sizes[i] = stmt->createStmt.columns[i].length;
@@ -642,4 +641,72 @@ void set_table_parameters(MetadataPage *metadata, Statement *stmt) {
             metadata->column_constraints[i] = CONSTRAINT_NONE;
         }
     }
+}
+
+bool is_data_in_row(int column_index, void* row_content,Statement* stmt) {
+        for(int col = 0; col < metadata->num_columns; col+=1){
+            if(metadata->column_types[col] == TYPE_VARCHAR){
+                uint32_t string_length;
+                memcpy(&string_length, row_content, sizeof(uint32_t));
+                row_content += sizeof(uint32_t);
+
+                if(col == column_index){
+                    void* string_content = malloc(string_length+1);
+                    memcpy(string_content, row_content, string_length);
+                    ((char*)string_content)[string_length] = '\0';
+
+                    if(strcmp(string_content,stmt->insertStmt.values[column_index].value) == 0){
+                        free(string_content);
+                        return true;
+                    }
+                    free(string_content);
+                    return false;
+                }
+                row_content += string_length;
+                
+            } else if(metadata->column_types[col] == TYPE_INT){
+                int64_t value;
+                memcpy(&value, row_content, sizeof(int64_t));
+                row_content += sizeof(int64_t);
+
+                if(col == column_index){
+                    if(value == strtoll(stmt->insertStmt.values[column_index].value, NULL, 10)){
+                        return true;
+                    }
+                    return false;
+                }
+            } 
+        }
+}
+
+bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int column_index) {
+    if(node == NULL){
+        perror("Error: NULL node in constraint_unique");
+        return false;
+    }
+
+    for(int i=1; i<= node->num_keys; i+=1){
+        uint64_t offset = (uint64_t)node->raw_data[i];
+        if(offset == 0 || offset >= df->size){
+            continue;
+        }
+        void *row_content = df->start_ptr + offset;
+
+        uint64_t row_byte_index = 0;
+
+        if(is_data_in_row(column_index, row_content,stmt)){
+            return true; 
+        }
+
+    }
+
+    if(node->plink != NULL){
+        for(int i=0; i<= node->num_keys; i+=1){
+            if(node->plink[i] != NULL){
+                constraint_unique(node->plink[i],stmt,metadata,column_index);
+            }
+        }
+    }
+
+    return false;
 }
