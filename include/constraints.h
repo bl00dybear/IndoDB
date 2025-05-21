@@ -1,0 +1,11 @@
+#ifndef CONSTRAINTS_H
+#define CONSTRAINTS_H
+
+typedef enum ConstraintType {
+    CONSTRAINT_NONE,
+    CONSTRAINT_NOT_NULL,
+    CONSTRAINT_UNIQUE,
+    CONSTRAINT_PRIMARY_KEY,
+    CONSTRAINT_FOREIGN_KEY,
+} ConstraintType;
+#endif

@@ -3,6 +3,7 @@
 
 #include "../libraries.h"
 #include "../data/core_structures.h"
+#include "../data/parser_structures.h"
 
 
 /*
@@ -93,6 +94,9 @@ void delete_value(struct RowNode *node, const uint64_t key);
 void delete_value_from_tree(const int val);
 void insert(const uint64_t key, void* data);
 void serialize_metadata(DBFile* db, MetadataPage* metadata);
+void deserialize_metadata(DBFile* db, MetadataPage* metadata);
+void set_table_parameters(MetadataPage *metadata, Statement *stmt);
+
 
 
 #endif

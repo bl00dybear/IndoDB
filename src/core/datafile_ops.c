@@ -45,7 +45,7 @@ void allocate_new_block(DataFile *df) {
     df->write_ptr = current_offset;
     df->size = new_size;
     df->dirty = true;
-
+    
     // printf("\nData file extended to size: %zu bytes\n", new_size);
     // printf("New block starts at offset: %ld\n", df->size - BLOCK_SIZE);
 }
@@ -423,7 +423,7 @@ int* display_table_anthet(char **columns, int num_columns, MetadataPage *meta) {
     bool column_found = false;
     for (int i = 0; i < num_columns; i++) {
         column_found = false;
-        for (int j = 0; j < meta->num_columns; j++) {
+        for (uint32_t j = 0; j < meta->num_columns; j++) {
             if (strcmp(columns[i], meta->column_names[j]) == 0) {
                 column_found = true;
                 column_indexes[i] = j;
@@ -440,7 +440,7 @@ int* display_table_anthet(char **columns, int num_columns, MetadataPage *meta) {
     print_separator(num_columns);
 
 
-    for (uint32_t i = 0; i < num_columns; i++) {
+    for (int i = 0; i < num_columns; i++) {
         printf("| %-*s ", column_width, columns[i]);
     }
     printf("|\n");
@@ -457,7 +457,7 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
     }
 
     for (int i = 1; i <= node->num_keys; i++) {
-        uint64_t offset = node->raw_data[i];
+        uint64_t offset = (uint64_t)node->raw_data[i];
         void *row_content = df->start_ptr + offset;
 
         printf("|");
@@ -493,11 +493,13 @@ void display_table(char **columns, int num_columns, MetadataPage *meta, Statemen
 void set_table_parameters(MetadataPage *metadata, Statement *stmt) { 
     metadata->root_page_num = 0;   
     metadata->last_table_id = global_id;
+    
     // printf("Setting table parameters...\n");
     metadata->magic = MAGIC_NUMBER;
     metadata->num_columns = stmt->createStmt.num_columns;
     strcpy(metadata->table_name, stmt->createStmt.table);
     for (int i = 0; i < stmt->createStmt.num_columns; i++) {
+
         strcpy(metadata->column_names[i], stmt->createStmt.columns[i].column_name);
         metadata->column_sizes[i] = stmt->createStmt.columns[i].length;
         if (strcasecmp(stmt->createStmt.columns[i].type, "Int") == 0) {
@@ -524,7 +526,16 @@ void set_table_parameters(MetadataPage *metadata, Statement *stmt) {
             metadata->column_types[i] = TYPE_INT;
             metadata->column_sizes[i] = sizeof(int);
         }
+        if(stmt->createStmt.columns[i].constraint == CONSTRAINT_NOT_NULL) {
+            metadata->column_constraints[i] = CONSTRAINT_NOT_NULL;
+        } else if(stmt->createStmt.columns[i].constraint == CONSTRAINT_UNIQUE) {
+            metadata->column_constraints[i] = CONSTRAINT_UNIQUE;
+        } else if(stmt->createStmt.columns[i].constraint == CONSTRAINT_PRIMARY_KEY) {
+            metadata->column_constraints[i] = CONSTRAINT_PRIMARY_KEY;
+        } else if(stmt->createStmt.columns[i].constraint == CONSTRAINT_FOREIGN_KEY) {
+            metadata->column_constraints[i] = CONSTRAINT_FOREIGN_KEY;
+        } else {
+            metadata->column_constraints[i] = CONSTRAINT_NONE;
+        }
     }
-
-    
-} 
+}

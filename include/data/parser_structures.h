@@ -1,6 +1,8 @@
 #ifndef PARSER_STRUCTURES_H
 #define PARSER_STRUCTURES_H
 
+#include "../constraints.h"
+
 typedef enum {
     STATEMENT_INSERT,
     STATEMENT_SELECT,
@@ -8,12 +10,13 @@ typedef enum {
     STATEMENT_DROP,
 } StatementType;
 
-typedef enum {
-    CONSTRAINT_NONE,
-    CONSTRAINT_PRIMARY_KEY,
-    CONSTRAINT_FOREIGN_KEY,
-    CONSTRAINT_NOT_NULL,
-} ConstraintType;
+// typedef enum {
+//     CONSTRAINT_NONE,
+//     CONSTRAINT_NOT_NULL,
+//     CONSTRAINT_UNIQUE,
+//     CONSTRAINT_PRIMARY_KEY,
+//     CONSTRAINT_FOREIGN_KEY,
+// } ConstraintType;
 
 typedef struct {
     char **columns;
