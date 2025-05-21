@@ -93,7 +93,7 @@ void database_init(char table_name[]) {
     if (!is_database_empty()) {
         database_load();
     }
-    else {
-        printf("Database is empty!\n");
-    }
+    // else {
+    //     printf("Database is empty!\n");
+    // }
 }

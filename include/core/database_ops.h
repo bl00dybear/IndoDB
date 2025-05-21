@@ -7,6 +7,9 @@
 #include "../core/memory_ops.h"
 #include "../utils/queue.h"
 
+void database_init(char table_name[]);
+
+
 
 
 #endif 
