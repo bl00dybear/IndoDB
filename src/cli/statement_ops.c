@@ -53,12 +53,14 @@ void process_statement(Statement *stmt) {
             free_page_queue=NULL;
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, "/btree");
             strcat(dbfilepath, stmt->selectStmt.table); 
             strcat(dbfilepath, ".bin");
             // printf("%s\n\n", dbfilepath);
 
             char datafilepath[256] = {0};
             strcpy(datafilepath, DATA_FILENAME);
+            strcat(datafilepath, "/data");
             strcat(datafilepath, stmt->selectStmt.table);
             strcat(datafilepath, ".bin");
 
@@ -98,6 +100,7 @@ void process_statement(Statement *stmt) {
             }
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, DB_FILENAME);
+            strcpy(dbfilepath, "/btree");
             strcat(dbfilepath, stmt->createStmt.table); 
             strcat(dbfilepath, ".bin");
             if(access(dbfilepath, F_OK) == 0) {
@@ -196,13 +199,8 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_CREATE_DB: {
-            if (strcmp(DB_FILENAME, "../databases") != 0 && strcmp(DB_FILENAME, "../databases/") != 0) {
-                printf("Error: Cannot create database inside another database.\n");
-                printf("You are currently in database: %s\n", strrchr(DB_FILENAME, '/') + 1);
-                break;
-            }
             char dbfilepath[256] = {0};
-            strcpy(dbfilepath, DB_FILENAME);
+            strcpy(dbfilepath, "../databases");
             strcat(dbfilepath, "/");
             strcat(dbfilepath, stmt->createDbStmt.database);
 
@@ -219,14 +217,15 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_DROP_DB: {
-            if (strcmp(DB_FILENAME, "../databases") != 0 && strcmp(DB_FILENAME, "../databases/") != 0) {
-                printf("Error: Drop database is only available outside any database.\n Use 'CLOSE DATABASE' first.\n");
-                break;
-            }
+
             char dbfilepath[256] = {0};
-            strcpy(dbfilepath, DB_FILENAME);
+            strcpy(dbfilepath, "../databases");
             strcat(dbfilepath, "/");
             strcat(dbfilepath, stmt->dropDbStmt.database);
+
+            if(strcmp(DB_FILENAME, dbfilepath) == 0) {
+                strcpy(DB_FILENAME, "../databases");
+            }
 
             // Verifică dacă directorul există
             if(access(dbfilepath, F_OK) != 0) {
@@ -247,11 +246,7 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_USE_DB: {
-            if (strcmp(DB_FILENAME, "../databases") != 0 && strcmp(DB_FILENAME, "../databases/") != 0){
-                
-                printf("Use database is only available outside any database.\n Use 'CLOSE DATABASE' first.\n");
-                printf("You are currently in database: %s\n", strrchr(DB_FILENAME, '/') + 1);
-                break;}
+
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, "../databases/");
             strcat(dbfilepath, stmt->useDbStmt.database);

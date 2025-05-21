@@ -33,11 +33,13 @@ void database_init(char table_name[]) {
     free_page_queue=NULL;
     char dbfilepath[256] = {0};
     strcpy(dbfilepath, DB_FILENAME);
+    strcat(dbfilepath, "/btree");
     strcat(dbfilepath, table_name); 
     strcat(dbfilepath, ".bin");
 
     char datafilepath[256] = {0};
-    strcpy(datafilepath, DATA_FILENAME);
+    strcpy(datafilepath, DB_FILENAME);
+    strcat(datafilepath, "/data");
     strcat(datafilepath, table_name);
     strcat(datafilepath, ".bin");
 
