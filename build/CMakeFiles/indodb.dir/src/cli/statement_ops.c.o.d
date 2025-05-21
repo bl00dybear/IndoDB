@@ -1,11 +1,10 @@
 CMakeFiles/indodb.dir/src/cli/statement_ops.c.o: \
- /home/cristi/projects/IndoDB/src/cli/statement_ops.c \
- /usr/include/stdc-predef.h \
- /home/cristi/projects/IndoDB/src/../include/cli/statement_ops.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../data/parser_structures.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../data/../constraints.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../data/core_structures.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../data/../libraries.h \
+ /home/ghrghr/IndoDB/src/cli/statement_ops.c /usr/include/stdc-predef.h \
+ /home/ghrghr/IndoDB/src/../include/cli/statement_ops.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../data/parser_structures.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../data/../constraints.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../data/core_structures.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../data/../libraries.h \
  /usr/include/stdio.h \
  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
  /usr/include/features.h /usr/include/features-time64.h \
@@ -91,17 +90,17 @@ CMakeFiles/indodb.dir/src/cli/statement_ops.c.o: \
  /usr/include/x86_64-linux-gnu/bits/termios-tcflow.h \
  /usr/include/x86_64-linux-gnu/bits/termios-misc.h \
  /usr/include/x86_64-linux-gnu/sys/ttydefaults.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../data/../config.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../utils/globals.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../utils/../data/core_structures.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/database_ops.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../utils/globals.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../core/datafile_ops.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../core/../data/core_structures.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../core/../data/parser_structures.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../core/row_btree_ops.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../core/../libraries.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../core/memory_ops.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../utils/queue.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/../utils/../data/core_structures.h \
- /home/cristi/projects/IndoDB/src/../include/cli/../core/row_btree_ops.h
+ /home/ghrghr/IndoDB/src/../include/cli/../data/../config.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../utils/globals.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../utils/../data/core_structures.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/database_ops.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../utils/globals.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../core/datafile_ops.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../core/../data/core_structures.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../core/../data/parser_structures.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../core/row_btree_ops.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../core/../libraries.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../core/memory_ops.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../utils/queue.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/../utils/../data/core_structures.h \
+ /home/ghrghr/IndoDB/src/../include/cli/../core/row_btree_ops.h
