@@ -1,0 +1,4 @@
+/home/cristi/projects/IndoDB/build/CMakeFiles/indodb.dir
+/home/cristi/projects/IndoDB/build/CMakeFiles/sql_parser.dir
+/home/cristi/projects/IndoDB/build/CMakeFiles/edit_cache.dir
+/home/cristi/projects/IndoDB/build/CMakeFiles/rebuild_cache.dir
