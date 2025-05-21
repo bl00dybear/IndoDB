@@ -6,7 +6,6 @@ void process_statement(Statement *stmt) {
     //     perror("Metadata allocation failed");
     //     exit(1);
     // }
-    
     switch (stmt->type) {
         case STATEMENT_INSERT: {
             database_init(stmt->insertStmt.table);
@@ -184,7 +183,45 @@ void process_statement(Statement *stmt) {
             
             break;
         }
-        // TODO : create table and drop table
+        case STATEMENT_CREATE_DB: {
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, stmt->createDbStmt.db_name); 
+            strcat(dbfilepath, ".bin");
+            if(access(dbfilepath, F_OK) == 0) {
+                printf("\n      Database '%s' already exists.\n\n", stmt->createDbStmt.db_name);
+                break;
+            }
+            create_database_file(dbfilepath);
+            printf("\n        Database %s created successfully!\n\n", stmt->createDbStmt.db_name);
+            break;
+        }
+        case STATEMENT_DROP_DB: {
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, stmt->dropDbStmt.db_name); 
+            strcat(dbfilepath, ".bin");
+            if(access(dbfilepath, F_OK) != 0) {
+                printf("\n      Database '%s' does not exist.\n\n", stmt->dropDbStmt.db_name);
+                break;
+            }
+            remove(dbfilepath);
+            printf("\n        Database %s dropped successfully!\n\n", stmt->dropDbStmt.db_name);
+            break;
+        }
+        case STATEMENT_USE_DB: {
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, stmt->useDbStmt.db_name); 
+            strcat(dbfilepath, ".bin");
+            if(access(dbfilepath, F_OK) != 0) {
+                printf("\n      Database '%s' does not exist.\n\n", stmt->useDbStmt.db_name);
+                break;
+            }
+            database_init(stmt->useDbStmt.db_name);
+            printf("\n        Database %s selected successfully!\n\n", stmt->useDbStmt.db_name);
+            break;
+        }
         default: break;
     }
 }

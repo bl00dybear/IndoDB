@@ -151,6 +151,7 @@ int cli() {
                 exit(1);
             }
             int res = parse_statement("../output/output.json", stmt);
+            
             if(res == -1){
                 free_statement(stmt);
                 continue;

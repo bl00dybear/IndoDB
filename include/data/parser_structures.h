@@ -8,6 +8,9 @@ typedef enum {
     STATEMENT_SELECT,
     STATEMENT_CREATE,
     STATEMENT_DROP,
+    STATEMENT_CREATE_DB,
+    STATEMENT_DROP_DB,
+    STATEMENT_USE_DB,
 } StatementType;
 
 // typedef enum {
@@ -52,15 +55,29 @@ typedef struct {
 } DropStmtStruct;
 
 typedef struct {
+    char *db_name;
+} CreateDbStmtStruct;
+
+typedef struct {
+    char *db_name;
+} DropDbStmtStruct;
+
+typedef struct {
+    char *db_name;
+} UseDbStmtStruct;
+
+typedef struct {
     StatementType type;
     union {
         InsertStmtStruct insertStmt;
         SelectStmtStruct selectStmt;
         CreateStmtStruct createStmt;
         DropStmtStruct dropStmt;
+        CreateDbStmtStruct createDbStmt;
+        DropDbStmtStruct dropDbStmt;
+        UseDbStmtStruct useDbStmt;
     };
 } Statement;
-
 
 #endif
 
