@@ -184,16 +184,7 @@ void process_statement(Statement *stmt) {
             break;
         }
         case STATEMENT_CREATE_DB: {
-            char dbfilepath[256] = {0};
-            strcpy(dbfilepath, DB_FILENAME);
-            strcat(dbfilepath, stmt->createDbStmt.database); 
-            strcat(dbfilepath, ".bin");
-            if(access(dbfilepath, F_OK) == 0) {
-                printf("Error: Database '%s' already exists.\n", stmt->createDbStmt.database);
-                break;
-            }
-            create_database_file(dbfilepath);
-            printf("Database %s created successfully!\n", stmt->createDbStmt.database);
+            
             break;
         }
         case STATEMENT_DROP_DB: {
