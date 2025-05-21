@@ -258,7 +258,6 @@ void traversal(const struct RowNode *myNode) {
         }
     }
 }
-
 // Serialization functions
 
 // Function to find an already visited node

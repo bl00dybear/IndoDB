@@ -325,6 +325,26 @@ int parse_statement(const char *filename, Statement *stmt) {
     return 0;
 }
 
+void verify_constraints(Statement *stmt, MetadataPage *metadata) {
+    for(int i = 0; i < metadata->num_columns; i++) {
+        if (metadata->column_constraints[i] == CONSTRAINT_NOT_NULL) {
+            // Check if the value is NULL
+            if (stmt->insertStmt.values[i].value == NULL) {
+                printf("Error: Column %s cannot be NULL\n", metadata->column_names[i]);
+                return;
+            }
+        } else if (metadata->column_constraints[i] == CONSTRAINT_UNIQUE) {
+            
+        } else if (metadata->column_constraints[i] == CONSTRAINT_PRIMARY_KEY) {
+            // Check for primary key constraints
+            // This is a placeholder, implement your own logic to check for primary key constraints
+        }
+    }
+    // Implement constraint verification logic here
+    // For example, check if the values meet the constraints defined in the metadata
+    // This is a placeholder function and should be implemented based on your requirements
+}
+
 void process_statement(Statement *stmt) {
     // metadata = malloc(sizeof(MetadataPage));
     // if (!metadata) {
@@ -341,11 +361,13 @@ void process_statement(Statement *stmt) {
             }
             deserialize_metadata(db, metadata);
 
+            for(int i = 0; i < metadata->num_columns; i++) {
+                
+            }
+
             // printf("metadata->table_name: %s\n", metadata->table_name);
             // printf("metadata ->num_columns: %d\n", metadata->num_columns);
             // printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
-
-
 
             if(!strcmp(metadata->table_name,stmt->insertStmt.table)) {
                 uint64_t row_size = 0;
@@ -759,7 +781,7 @@ void database_init(char table_name[]) {
 
     free_page_queue = create_queue();
 
-    for(int i=1;i<=21792;i+=1){
+    for(int i=1;i<=20768;i+=1){
         push(free_page_queue,i);
     }
     if (!is_database_empty()) {

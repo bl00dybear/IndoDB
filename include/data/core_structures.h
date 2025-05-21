@@ -3,6 +3,7 @@
 
 #include "../libraries.h"
 #include "../config.h"
+#include "../constraints.h"
 #include <stdio.h>   
 
 typedef struct DBFile{
@@ -58,8 +59,9 @@ typedef struct {
     uint32_t num_columns;                        // 4 bytes
     char column_names[MAX_COLUMNS][MAX_COLUMN_NAME];  // 32 * 32 = 1024 bytes
     ColumnType column_types[MAX_COLUMNS];        // 32 * 4 = 128 bytes
+    ConstraintType column_constraints[MAX_COLUMNS]; // 32 * 4 = 128 bytes
     uint32_t column_sizes[MAX_COLUMNS];          // 32 * 4 = 128 bytes
-    unsigned char free_page_bitmap[METADATA_SIZE-8 -8 - 8 - 64 - 4 - 1024 - 128 - 128];  // 2724 bytes (A total of 3.700.000 rows accepted in every table)
+    unsigned char free_page_bitmap[METADATA_SIZE-8 -8 - 8 - 64 - 4 - 1024 - 128 - 128 - 128];  // 2596 bytes (over 3.5 million rows accepted)
 } MetadataPage;
 
 
