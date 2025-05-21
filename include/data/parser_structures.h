@@ -55,15 +55,15 @@ typedef struct {
 } DropStmtStruct;
 
 typedef struct {
-    char *db_name;
+    char *database;
 } CreateDbStmtStruct;
 
 typedef struct {
-    char *db_name;
+    char *database;
 } DropDbStmtStruct;
 
 typedef struct {
-    char *db_name;
+    char *database;
 } UseDbStmtStruct;
 
 typedef struct {

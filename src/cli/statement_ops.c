@@ -37,7 +37,7 @@ void process_statement(Statement *stmt) {
                 commit_changes_db(db, metadata);
                 commit_changes_df(df);
             }else{
-                printf("Table %s not found in database\n", stmt->insertStmt.table);
+                printf("Error: Table %s not found in database\n", stmt->insertStmt.table);
             }
 
             break;
@@ -60,13 +60,13 @@ void process_statement(Statement *stmt) {
 
             if(!(~access(dbfilepath, F_OK)))
             {   
-                perror("Database file not found"); 
+                perror("Error: Database file not found"); 
                 break;
             }
             
             if(!(~access(datafilepath, F_OK)))
             {
-                perror("Data file not found");
+                perror("Error: Data file not found");
                 break;
             }
             database_init(stmt->selectStmt.table);
@@ -82,7 +82,7 @@ void process_statement(Statement *stmt) {
                     display_table(stmt->selectStmt.columns, stmt->selectStmt.num_columns, metadata, stmt);
                 }
             } else {
-                    printf("Table %s is empty\n", stmt->selectStmt.table);
+                    printf("Error: Table %s is empty\n", stmt->selectStmt.table);
             }
 
             break;
@@ -93,13 +93,13 @@ void process_statement(Statement *stmt) {
             strcat(dbfilepath, stmt->createStmt.table); 
             strcat(dbfilepath, ".bin");
             if(access(dbfilepath, F_OK) == 0) {
-                printf("\n      Table '%s' already exists.\n\n", stmt->createStmt.table);
+                printf("Error: Table '%s' already exists.\n", stmt->createStmt.table);
                 break;
             }
             
 
             database_init(stmt->createStmt.table);
-            printf("\n        Table %s created successfully!\n\n", stmt->createStmt.table);
+            printf("Table %s created successfully!\n", stmt->createStmt.table);
 
             set_table_parameters(metadata, stmt);
 
@@ -125,7 +125,7 @@ void process_statement(Statement *stmt) {
             
             // Check if the files exist before attempting to delete
             if (access(filepath_db, F_OK) != 0 || access(filepath_df, F_OK) != 0) {
-                printf("Table '%s' does not exist.\n", stmt->dropStmt.table);
+                printf("Error: Table '%s' does not exist.\n", stmt->dropStmt.table);
                 break;
             }
             
@@ -173,10 +173,10 @@ void process_statement(Statement *stmt) {
             } else {
                 printf("Error dropping table '%s'. ", stmt->dropStmt.table);
                 if (result_db != 0) {
-                    printf("Database file error\n");
+                    printf("Error: Database file error\n");
                 }
                 if (result_df != 0) {
-                    printf("Data file error\n");
+                    printf("Error: Data file error\n");
                 }
                 printf("\n");
             }
@@ -186,40 +186,40 @@ void process_statement(Statement *stmt) {
         case STATEMENT_CREATE_DB: {
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, DB_FILENAME);
-            strcat(dbfilepath, stmt->createDbStmt.db_name); 
+            strcat(dbfilepath, stmt->createDbStmt.database); 
             strcat(dbfilepath, ".bin");
             if(access(dbfilepath, F_OK) == 0) {
-                printf("\n      Database '%s' already exists.\n\n", stmt->createDbStmt.db_name);
+                printf("Error: Database '%s' already exists.\n", stmt->createDbStmt.database);
                 break;
             }
             create_database_file(dbfilepath);
-            printf("\n        Database %s created successfully!\n\n", stmt->createDbStmt.db_name);
+            printf("Database %s created successfully!\n", stmt->createDbStmt.database);
             break;
         }
         case STATEMENT_DROP_DB: {
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, DB_FILENAME);
-            strcat(dbfilepath, stmt->dropDbStmt.db_name); 
+            strcat(dbfilepath, stmt->dropDbStmt.database); 
             strcat(dbfilepath, ".bin");
             if(access(dbfilepath, F_OK) != 0) {
-                printf("\n      Database '%s' does not exist.\n\n", stmt->dropDbStmt.db_name);
+                printf("Error: Database '%s' does not exist.\n", stmt->dropDbStmt.database);
                 break;
             }
             remove(dbfilepath);
-            printf("\n        Database %s dropped successfully!\n\n", stmt->dropDbStmt.db_name);
+            printf("Database %s dropped successfully!\n", stmt->dropDbStmt.database);
             break;
         }
         case STATEMENT_USE_DB: {
             char dbfilepath[256] = {0};
             strcpy(dbfilepath, DB_FILENAME);
-            strcat(dbfilepath, stmt->useDbStmt.db_name); 
+            strcat(dbfilepath, stmt->useDbStmt.database); 
             strcat(dbfilepath, ".bin");
             if(access(dbfilepath, F_OK) != 0) {
-                printf("\n      Database '%s' does not exist.\n\n", stmt->useDbStmt.db_name);
+                printf("Error: Database '%s' does not exist.\n", stmt->useDbStmt.database);
                 break;
             }
-            database_init(stmt->useDbStmt.db_name);
-            printf("\n        Database %s selected successfully!\n\n", stmt->useDbStmt.db_name);
+            database_init(stmt->useDbStmt.database);
+            printf("Database %s selected successfully!\n", stmt->useDbStmt.database);
             break;
         }
         default: break;

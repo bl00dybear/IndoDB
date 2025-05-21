@@ -47,7 +47,6 @@ int parse_statement(const char *filename, Statement *stmt) {
 
     // Selectam ce tip de statement este
     cJSON *statement_type = cJSON_GetObjectItemCaseSensitive(json, "statement");
-    // printf("Tip de stmt: %s\n", statement_type->valuestring);
 
     // Initializam statementul in functie de ce tip este:
     if (strcmp(statement_type->valuestring, "InsertStmt") == 0) {
@@ -155,7 +154,10 @@ int parse_statement(const char *filename, Statement *stmt) {
                     stmt->createStmt.columns[i].constraint = CONSTRAINT_FOREIGN_KEY;
                 } else if (strcmp(col_constraint->valuestring, "NotNull") == 0) {
                     stmt->createStmt.columns[i].constraint = CONSTRAINT_NOT_NULL;
+                } else if (strcmp(col_constraint->valuestring, "Unique") == 0) {
+                    stmt->createStmt.columns[i].constraint = CONSTRAINT_UNIQUE;
                 } else {
+                    printf("Error: Unknown constraint type: %s\n", col_constraint->valuestring);
                     stmt->createStmt.columns[i].constraint = CONSTRAINT_NONE;
                 }
             } else {
@@ -188,16 +190,30 @@ int parse_statement(const char *filename, Statement *stmt) {
             }
         
         }
-     } else if(strcmp(statement_type->valuestring, "DropStmt") == 0) {
+    } else if(strcmp(statement_type->valuestring, "DropStmt") == 0) {
         stmt->type = STATEMENT_DROP;
 
         cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
         stmt->dropStmt.table = strdup(table->valuestring);
-     } else {
+    } else if (strcmp(statement_type->valuestring, "CreateDbStmt") == 0) {
+        stmt->type = STATEMENT_CREATE_DB;
+        
+        cJSON *database = cJSON_GetObjectItemCaseSensitive(json, "database");
+        stmt->createDbStmt.database = strdup(database->valuestring);
+    } else if (strcmp(statement_type->valuestring, "DropDbStmt") == 0) {
+        stmt->type = STATEMENT_DROP_DB;
+
+        cJSON *database = cJSON_GetObjectItemCaseSensitive(json, "database");
+        stmt->dropDbStmt.database = strdup(database->valuestring);
+    } else if (strcmp(statement_type->valuestring, "UseDbStmt") == 0) {
+        stmt->type = STATEMENT_USE_DB;
+
+        cJSON *database = cJSON_GetObjectItemCaseSensitive(json, "database");
+        stmt->useDbStmt.database = strdup(database->valuestring);
+    } else {
         printf("Unknown statement type: %s\n", statement_type->valuestring);
         return 1;
     }
-    
 
     cJSON_Delete(json);
     free(data);
