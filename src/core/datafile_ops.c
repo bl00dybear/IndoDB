@@ -256,13 +256,32 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
 
 
 void print_row_content(void* row_content, MetadataPage *metadata, int* column_indexes, int num_columns) {
+    // Verificare pentru pointeri NULL
+    if (!row_content || !metadata || !column_indexes || num_columns <= 0) {
+        fprintf(stderr, "Error: Invalid parameters passed to print_row_content\n");
+        return;
+    }
+
+    // Citire size din header cu verificare
     uint64_t row_size;
     memcpy(&row_size, row_content, sizeof(uint64_t));
+    
+    // Verificare dimensiune validă
+    if (row_size < 9 || row_size > MAX_BUFFER_SIZE) {
+        fprintf(stderr, "Error: Invalid row size: %lu\n", row_size);
+        return;
+    }
 
     bool flag;
     memcpy(&flag, row_content + 8, sizeof(bool));
 
+    // Alocă memoria cu verificare
     void* row_content_mem = malloc(row_size-9);
+    if (row_content_mem == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed in print_row_content\n");
+        return;
+    }
+    
     memcpy(row_content_mem, row_content+9, row_size-9);
 
     uint64_t row_byte_index = 0;
@@ -279,16 +298,48 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
     
     // Citim toate valorile din rând
     ColumnValue values[MAX_COLUMNS];
+    
+    // Inițializare pentru eliberare de memorie în caz de eroare
+    for (uint64_t col = 0; col < metadata->num_columns; col++) {
+        values[col].type = -1;
+        values[col].str_value = NULL;
+    }
+    
+    // Citire date cu verificări de limitare
     for (uint64_t col = 0; col < metadata->num_columns; col++) {
         values[col].type = metadata->column_types[col];
         
+        // Verificare depășire buffer
+        if (row_byte_index >= row_size-9) {
+            fprintf(stderr, "Error: Reached end of row data prematurely\n");
+            goto cleanup;
+        }
+        
         switch (values[col].type) {
             case TYPE_VARCHAR: {
+                // Verificare spațiu suficient pentru string length
+                if (row_byte_index + sizeof(uint32_t) > row_size-9) {
+                    fprintf(stderr, "Error: Not enough space for string length\n");
+                    goto cleanup;
+                }
+                
                 uint32_t string_len;
                 memcpy(&string_len, row_content_mem + row_byte_index, sizeof(uint32_t));
                 row_byte_index += sizeof(uint32_t);
+                
+                // Verificare lungime validă string
+                if (string_len > MAX_BUFFER_SIZE || 
+                    row_byte_index + string_len > row_size-9) {
+                    fprintf(stderr, "Error: Invalid string length or insufficient data\n");
+                    goto cleanup;
+                }
 
                 values[col].str_value = malloc(string_len + 1);
+                if (values[col].str_value == NULL) {
+                    fprintf(stderr, "Error: Failed to allocate memory for string\n");
+                    goto cleanup;
+                }
+                
                 memcpy(values[col].str_value, row_content_mem + row_byte_index, string_len);
                 values[col].str_value[string_len] = '\0';
                 values[col].str_len = string_len;
@@ -296,6 +347,12 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
                 break;
             }
             case TYPE_INT: {
+                // Verificare spațiu suficient pentru int
+                if (row_byte_index + sizeof(int64_t) > row_size-9) {
+                    fprintf(stderr, "Error: Not enough space for integer value\n");
+                    goto cleanup;
+                }
+                
                 memcpy(&values[col].int_value, row_content_mem + row_byte_index, sizeof(int64_t));
                 row_byte_index += sizeof(int64_t);
                 break;
@@ -306,10 +363,17 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
         }
     }
     
-    // Determinăm numărul de linii necesar pentru afișare
+    // Determinăm numărul de linii necesar pentru afișare cu verificarea indicilor coloanelor
     int max_lines = 1;
     for (int i = 0; i < num_columns; i++) {
         uint64_t col = column_indexes[i];
+        
+        // Verificare index valid
+        if (col >= metadata->num_columns) {
+            fprintf(stderr, "Warning: Column index %lu out of bounds\n", col);
+            continue;
+        }
+        
         if (values[col].type == TYPE_VARCHAR && values[col].str_len > 0) {
             int lines_needed = (values[col].str_len + 19) / 20; // Rotunjire în sus
             if (lines_needed > max_lines) {
@@ -327,8 +391,20 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
         
         for (int i = 0; i < num_columns; i++) {
             uint64_t col = column_indexes[i];
+            
+            // Verificare index valid
+            if (col >= metadata->num_columns) {
+                printf(" %-*s |", column_width, "INVALID");
+                continue;
+            }
+            
             switch (values[col].type) {
                 case TYPE_VARCHAR: {
+                    if (values[col].str_value == NULL) {
+                        printf(" %-*s |", column_width, "NULL");
+                        break;
+                    }
+                    
                     uint32_t start = line * 20;
                     if (start < values[col].str_len) {
                         uint32_t display_len = ((values[col].str_len - start) > 20) ? 20 : (values[col].str_len - start);
@@ -357,14 +433,19 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
         }
     }
     
-    // Eliberăm memoria
+cleanup:
+    // Eliberăm memoria alocată pentru string-uri
     for (uint64_t col = 0; col < metadata->num_columns; col++) {
-        if (values[col].type == TYPE_VARCHAR) {
+        if (values[col].type == TYPE_VARCHAR && values[col].str_value != NULL) {
             free(values[col].str_value);
+            values[col].str_value = NULL;
         }
     }
 
-    free(row_content_mem);
+    // Eliberăm memoria pentru conținutul rândului
+    if (row_content_mem) {
+        free(row_content_mem);
+    }
 }
 
 void print_separator(int num_columns) {
@@ -424,10 +505,48 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
     if (node == NULL) {
         return;
     }
+    
+    // Verificăm nodurile duplicate pentru a evita cicluri infinite
+    static void* visited_nodes[1000] = {0};  // Stocăm ultimele 1000 noduri vizitate
+    static int visited_count = 0;
+    
+    // Verifică dacă nodul a fost deja vizitat
+    for (int v = 0; v < visited_count; v++) {
+        if (visited_nodes[v] == node) {
+            // Am detectat un ciclu, oprim traversarea
+            return;
+        }
+    }
+    
+    // Adaugă nodul la lista de noduri vizitate
+    if (visited_count < 1000) {
+        visited_nodes[visited_count++] = node;
+    } else {
+        // Resetăm array-ul dacă depășim limita
+        visited_count = 0;
+        visited_nodes[visited_count++] = node;
+    }
 
-    for (int i = 1; i <= node->num_keys; i++) {
+    // Afișează rândurile din nodul curent
+    for (int i = 1; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
         uint64_t offset = (uint64_t)node->raw_data[i];
+        
+        // Verifică dacă offsetul e valid
+        if (offset == 0 || offset >= df->size) {
+            // Offset invalid, trecem la următorul rând
+            continue;
+        }
+        
         void *row_content = df->start_ptr + offset;
+        
+        // Verificare rapidă a dimensiunii rândului
+        uint64_t row_size;
+        memcpy(&row_size, row_content, sizeof(uint64_t));
+        
+        // Ignoră rândurile cu dimensiune invalidă
+        if (row_size < 9 || row_size > MAX_BUFFER_SIZE) {
+            continue;
+        }
 
         printf("|");
         print_row_content(row_content, metadata, column_indexes, num_columns);
@@ -436,10 +555,25 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
         print_separator(num_columns);
     }
 
-    for (int i = 0; i <= node->num_keys; i++) {
-        if (node->plink != NULL && node->plink[i] != NULL) {
-            display_all_rows(node->plink[i], metadata, column_indexes, num_columns);
+    // Traversează recursiv nodurile copil, cu verificări de siguranță
+    if (node->plink != NULL) {
+        for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
+            if (node->plink[i] != NULL) {
+                // Verificări suplimentare de validitate
+                if ((uintptr_t)node->plink[i] < 1000 || 
+                    (uintptr_t)node->plink[i] > (uintptr_t)df->start_ptr + df->size) {
+                    // Pointer suspect sau în afara limitelor, ignoră
+                    continue;
+                }
+                
+                display_all_rows(node->plink[i], metadata, column_indexes, num_columns);
+            }
         }
+    }
+    
+    // Când ieșim din recursivitate, eliminăm nodul din lista de vizitate
+    if (visited_count > 0) {
+        visited_count--;
     }
 }
 
