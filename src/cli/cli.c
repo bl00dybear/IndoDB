@@ -108,7 +108,7 @@ int cli() {
     // printf("\033[H\033[J");
 
     while (1) {
-        printf("IndoDB> ");
+        printf("indodb> ");
         fflush(stdout);
         input[0] = '\0';
 
