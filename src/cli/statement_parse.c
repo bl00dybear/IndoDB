@@ -1,5 +1,27 @@
 #include "../include/cli/statement_parse.h"
 
+void collect_columns_from_condition(cJSON *condition, char ***columns, int *count, int *capacity) {
+    if (condition == NULL) return;
+
+    cJSON *left = cJSON_GetObjectItemCaseSensitive(condition, "left");
+    cJSON *right = cJSON_GetObjectItemCaseSensitive(condition, "right");
+    cJSON *column = cJSON_GetObjectItemCaseSensitive(condition, "column");
+
+    // If this node contains a column, it's a leaf condition
+    if (column != NULL && cJSON_IsString(column)) {
+        // Resize array if needed
+        if (*count >= *capacity) {
+            *capacity *= 2;
+            *columns = realloc(*columns, (*capacity) * sizeof(char*));
+        }
+        (*columns)[(*count)++] = strdup(column->valuestring);
+    }
+
+    // Recurse into left and right if they exist
+    if (left != NULL) collect_columns_from_condition(left, columns, count, capacity);
+    if (right != NULL) collect_columns_from_condition(right, columns, count, capacity);
+}
+
 int parse_statement(const char *filename, Statement *stmt) {
     // Este deschis fisierul output.json
     FILE *fp = fopen(filename, "r");
@@ -119,10 +141,19 @@ int parse_statement(const char *filename, Statement *stmt) {
         // printf("Nume tabel: %s\n", stmt->selectStmt.table);
 
         if (cJSON_IsNull(condition)) {
-            stmt->selectStmt.condition = NULL;
-            // printf("Conditia e NULL: %d", stmt->selectStmt.condition);
+            stmt->selectStmt.cond_column = NULL;
         } else {
-            stmt->selectStmt.condition = strdup(condition->valuestring);
+            int capacity = 4;
+            int count = 0;
+            char **cond_columns = malloc(capacity * sizeof(char*));
+
+            collect_columns_from_condition(condition, &cond_columns, &count, &capacity);
+
+            stmt->selectStmt.cond_column = cond_columns;
+            printf("Coloane din conditie:\n");
+            for (int i = 0; i < count; i++) {
+                printf(" - %s\n", cond_columns[i]);
+            }
         }
     } else if(strcmp(statement_type->valuestring, "CreateStmt") == 0) {
         stmt->type = STATEMENT_CREATE;
