@@ -1,5 +1,127 @@
 #include "../include/cli/statement_ops.h"
 
+void preprocess_insert_statement(Statement *stmt, MetadataPage *metadata) {
+    if (!stmt || !metadata || stmt->type != STATEMENT_INSERT) {
+        printf("Error: Invalid statement or metadata for preprocessing\n");
+        return;
+    }
+
+    // Structura temporară pentru a stoca valorile de insert complete
+    struct {
+        char *value;
+        char *valueType;
+    } *complete_values = malloc(sizeof(*complete_values) * metadata->num_columns);
+    
+    if (!complete_values) {
+        perror("Failed to allocate memory for insert preprocessing");
+        return;
+    }
+    
+    // Inițializează toate valorile cu valori implicite în funcție de tipul de date
+    for (uint32_t i = 0; i < metadata->num_columns; i++) {
+        switch (metadata->column_types[i]) {
+            case TYPE_INT:
+                complete_values[i].value = strdup("0");  // Valoare default pentru INT
+                complete_values[i].valueType = strdup("Int");
+                break;
+            case TYPE_FLOAT:
+                complete_values[i].value = strdup("0.0");  // Valoare default pentru FLOAT
+                complete_values[i].valueType = strdup("FLOAT");
+                break;
+            case TYPE_VARCHAR:
+                complete_values[i].value = strdup("NULL");  // Valoare default pentru VARCHAR
+                complete_values[i].valueType = strdup("String");
+                break;
+            case TYPE_TIMESTAMP:
+                complete_values[i].value = strdup("0");  // Valoare default pentru TIMESTAMP
+                complete_values[i].valueType = strdup("TIMESTAMP");
+                break;
+            default:
+                complete_values[i].value = strdup("NULL");  // Pentru orice alt tip (nu ar trebui să apară)
+                complete_values[i].valueType = strdup("String");
+                break;
+        }
+    }
+    
+    // Mapează coloanele specificate la pozițiile corecte din tabel
+    for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
+        bool column_found = false;
+        
+        for (uint32_t j = 0; j < metadata->num_columns; j++) {
+            if (strcmp(stmt->insertStmt.columns[i], metadata->column_names[j]) == 0) {
+                // Eliberam valorile implicite
+                free(complete_values[j].value);
+                free(complete_values[j].valueType);
+                
+                // Copiază valoarea din statement (dacă există)
+                if (stmt->insertStmt.values[i].value) {
+                    complete_values[j].value = strdup(stmt->insertStmt.values[i].value);
+                } else {
+                    // Dacă valoarea e NULL în query, folosim valorile implicite
+                    switch (metadata->column_types[j]) {
+                        case TYPE_INT:
+                            complete_values[j].value = strdup("0");
+                            break;
+                        case TYPE_FLOAT:
+                            complete_values[j].value = strdup("0.0");
+                            break;
+                        case TYPE_VARCHAR:
+                            complete_values[j].value = strdup("NULL");
+                            break;
+                        case TYPE_TIMESTAMP:
+                            complete_values[j].value = strdup("0");
+                            break;
+                        default:
+                            complete_values[j].value = strdup("NULL");
+                            break;
+                    }
+                }
+                
+                // Copiază tipul specificat în query
+                complete_values[j].valueType = strdup(stmt->insertStmt.values[i].valueType);
+                
+                column_found = true;
+                break;
+            }
+        }
+        
+        if (!column_found) {
+            printf("Warning: Column '%s' does not exist in table '%s'\n", 
+                  stmt->insertStmt.columns[i], metadata->table_name);
+        }
+    }
+    
+    // Eliberează structura veche
+    for (int i = 0; i < stmt->insertStmt.num_values; i++) {
+        free(stmt->insertStmt.values[i].value);
+        free(stmt->insertStmt.values[i].valueType);
+    }
+    free(stmt->insertStmt.values);
+    
+    // Eliberează lista veche de coloane
+    for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
+        free(stmt->insertStmt.columns[i]);
+    }
+    free(stmt->insertStmt.columns);
+    
+    // Actualizează statement-ul cu noile valori
+    stmt->insertStmt.values = complete_values;
+    stmt->insertStmt.num_values = metadata->num_columns;
+    
+    // Creează noua listă de coloane care include toate coloanele din tabel
+    stmt->insertStmt.columns = malloc(sizeof(char*) * metadata->num_columns);
+    if (!stmt->insertStmt.columns) {
+        perror("Failed to allocate memory for column names");
+        return;
+    }
+    
+    for (uint32_t i = 0; i < metadata->num_columns; i++) {
+        stmt->insertStmt.columns[i] = strdup(metadata->column_names[i]);
+    }
+    stmt->insertStmt.num_columns = metadata->num_columns;
+}
+
+
 void process_statement(Statement *stmt) {
 
     switch (stmt->type) {
@@ -15,17 +137,15 @@ void process_statement(Statement *stmt) {
             }
             deserialize_metadata(db, metadata);
 
+            // if(stmt->insertStmt.columns != NULL){
+            //     preprocess_insert_statement(stmt, metadata);
+            // }
             if(root!=NULL){
                 if(verify_constraints(stmt, metadata) == false) {
                     printf("        Error: Constraints not met\n");
                     break;
                 }
             }
-
-
-            // printf("metadata->table_name: %s\n", metadata->table_name);
-            // printf("metadata ->num_columns: %d\n", metadata->num_columns);
-            // printf("metadata ->root_page_num: %ld\n", metadata->root_page_num);
 
             if(!strcmp(metadata->table_name,stmt->insertStmt.table)) {
                 uint64_t row_size = 0;
@@ -36,7 +156,6 @@ void process_statement(Statement *stmt) {
                 insert(current_id,written_address);
                 set_file_dirty_db(db, true);
                 set_file_dirty_df(df,true);
-
 
                 commit_changes_db(db, metadata);
                 commit_changes_df(df);
