@@ -352,8 +352,15 @@ bool verify_constraints(Statement *stmt, MetadataPage *metadata) {
                 return false;
             }
         } else if (metadata->column_constraints[i] == CONSTRAINT_PRIMARY_KEY) {
-            // Check for primary key constraints
-            // This is a placeholder, implement your own logic to check for primary key constraints
+            if (stmt->insertStmt.values[i].value == NULL) {
+                printf("Error: Column %s cannot be NULL\n", metadata->column_names[i]);
+                return false;
+            }
+            bool is_unique = constraint_unique(root, stmt, metadata, i);
+            if (!is_unique) {
+                printf("Error: Column \'%s\' must be unique\n", metadata->column_names[i]);
+                return false;
+            }
         }
     }
     // Implement constraint verification logic here
