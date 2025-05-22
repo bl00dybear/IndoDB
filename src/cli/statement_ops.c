@@ -5,8 +5,6 @@ void preprocess_insert_statement(Statement *stmt, MetadataPage *metadata) {
         printf("Error: Invalid statement or metadata for preprocessing\n");
         return;
     }
-
-    // Structura temporară pentru a stoca valorile de insert complete
     struct {
         char *value;
         char *valueType;
@@ -17,47 +15,42 @@ void preprocess_insert_statement(Statement *stmt, MetadataPage *metadata) {
         return;
     }
     
-    // Inițializează toate valorile cu valori implicite în funcție de tipul de date
     for (uint32_t i = 0; i < metadata->num_columns; i++) {
         switch (metadata->column_types[i]) {
             case TYPE_INT:
-                complete_values[i].value = strdup("0");  // Valoare default pentru INT
+                complete_values[i].value = strdup("0");  
                 complete_values[i].valueType = strdup("Int");
                 break;
             case TYPE_FLOAT:
-                complete_values[i].value = strdup("0.0");  // Valoare default pentru FLOAT
+                complete_values[i].value = strdup("0.0");  
                 complete_values[i].valueType = strdup("FLOAT");
                 break;
             case TYPE_VARCHAR:
-                complete_values[i].value = strdup("NULL");  // Valoare default pentru VARCHAR
+                complete_values[i].value = strdup("NULL");  
                 complete_values[i].valueType = strdup("String");
                 break;
             case TYPE_TIMESTAMP:
-                complete_values[i].value = strdup("0");  // Valoare default pentru TIMESTAMP
+                complete_values[i].value = strdup("0");  
                 complete_values[i].valueType = strdup("TIMESTAMP");
                 break;
             default:
-                complete_values[i].value = strdup("NULL");  // Pentru orice alt tip (nu ar trebui să apară)
+                complete_values[i].value = strdup("NULL");  
                 complete_values[i].valueType = strdup("String");
                 break;
         }
     }
     
-    // Mapează coloanele specificate la pozițiile corecte din tabel
     for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
         bool column_found = false;
         
         for (uint32_t j = 0; j < metadata->num_columns; j++) {
             if (strcmp(stmt->insertStmt.columns[i], metadata->column_names[j]) == 0) {
-                // Eliberam valorile implicite
                 free(complete_values[j].value);
                 free(complete_values[j].valueType);
                 
-                // Copiază valoarea din statement (dacă există)
                 if (stmt->insertStmt.values[i].value) {
                     complete_values[j].value = strdup(stmt->insertStmt.values[i].value);
                 } else {
-                    // Dacă valoarea e NULL în query, folosim valorile implicite
                     switch (metadata->column_types[j]) {
                         case TYPE_INT:
                             complete_values[j].value = strdup("0");
@@ -77,7 +70,6 @@ void preprocess_insert_statement(Statement *stmt, MetadataPage *metadata) {
                     }
                 }
                 
-                // Copiază tipul specificat în query
                 complete_values[j].valueType = strdup(stmt->insertStmt.values[i].valueType);
                 
                 column_found = true;
@@ -91,24 +83,20 @@ void preprocess_insert_statement(Statement *stmt, MetadataPage *metadata) {
         }
     }
     
-    // Eliberează structura veche
     for (int i = 0; i < stmt->insertStmt.num_values; i++) {
         free(stmt->insertStmt.values[i].value);
         free(stmt->insertStmt.values[i].valueType);
     }
     free(stmt->insertStmt.values);
     
-    // Eliberează lista veche de coloane
     for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
         free(stmt->insertStmt.columns[i]);
     }
     free(stmt->insertStmt.columns);
     
-    // Actualizează statement-ul cu noile valori
     stmt->insertStmt.values = complete_values;
     stmt->insertStmt.num_values = metadata->num_columns;
     
-    // Creează noua listă de coloane care include toate coloanele din tabel
     stmt->insertStmt.columns = malloc(sizeof(char*) * metadata->num_columns);
     if (!stmt->insertStmt.columns) {
         perror("Failed to allocate memory for column names");
@@ -121,11 +109,237 @@ void preprocess_insert_statement(Statement *stmt, MetadataPage *metadata) {
     stmt->insertStmt.num_columns = metadata->num_columns;
 }
 
+void replace_null_values(Statement *stmt, MetadataPage *metadata) {
+    if (!stmt || !metadata || stmt->type != STATEMENT_INSERT) {
+        printf("Error: Invalid statement or metadata for NULL value replacement\n");
+        return;
+    }
+    
+    // Structura temporară pentru a stoca valorile de insert complete
+    struct {
+        char *value;
+        char *valueType;
+    } *complete_values = malloc(sizeof(*complete_values) * metadata->num_columns);
+    
+    if (!complete_values) {
+        perror("Failed to allocate memory for NULL value replacement");
+        return;
+    }
+    
+    // Inițializează toate valorile cu valori implicite pentru NULL în funcție de tipul coloanei
+    for (uint32_t i = 0; i < metadata->num_columns; i++) {
+        switch (metadata->column_types[i]) {
+            case TYPE_INT:
+                complete_values[i].value = strdup("0");
+                complete_values[i].valueType = strdup("Int");
+                break;
+            case TYPE_FLOAT:
+                complete_values[i].value = strdup("0.0");
+                complete_values[i].valueType = strdup("FLOAT");
+                break;
+            case TYPE_VARCHAR:
+                complete_values[i].value = strdup("NULL");
+                complete_values[i].valueType = strdup("String");
+                break;
+            case TYPE_TIMESTAMP:
+                complete_values[i].value = strdup("0");
+                complete_values[i].valueType = strdup("TIMESTAMP");
+                break;
+            default:
+                complete_values[i].value = strdup("NULL");
+                complete_values[i].valueType = strdup("String");
+                break;
+        }
+    }
+    
+    // Cazul când nu avem coloane specificate, dar avem valori
+    if (stmt->insertStmt.columns == NULL || stmt->insertStmt.num_columns == 0) {
+        // Verificăm dacă avem numărul corect de valori
+        if (stmt->insertStmt.num_values != metadata->num_columns) {
+            printf("Error: Number of values (%d) doesn't match number of columns (%d) in table\n",
+                   stmt->insertStmt.num_values, metadata->num_columns);
+            
+            // Eliberăm memoria alocată
+            for (uint32_t i = 0; i < metadata->num_columns; i++) {
+                free(complete_values[i].value);
+                free(complete_values[i].valueType);
+            }
+            free(complete_values);
+            return;
+        }
+        
+        // Copiem valorile direct, fără a căuta coloanele
+        for (uint32_t i = 0; i < metadata->num_columns && i < (uint32_t)stmt->insertStmt.num_values; i++) {
+            // Eliberăm valorile implicite
+            free(complete_values[i].value);
+            free(complete_values[i].valueType);
+            
+            // Verificăm dacă valoarea este NULL
+            if (!stmt->insertStmt.values[i].value || 
+                strcmp(stmt->insertStmt.values[i].value, "NULL") == 0) {
+                // Folosim valoarea implicită pentru tipul acestei coloane
+                switch (metadata->column_types[i]) {
+                    case TYPE_INT:
+                        complete_values[i].value = strdup("0");
+                        complete_values[i].valueType = strdup("Int");
+                        break;
+                    case TYPE_FLOAT:
+                        complete_values[i].value = strdup("0.0");
+                        complete_values[i].valueType = strdup("FLOAT");
+                        break;
+                    case TYPE_VARCHAR:
+                        complete_values[i].value = strdup("NULL");
+                        complete_values[i].valueType = strdup("String");
+                        break;
+                    case TYPE_TIMESTAMP:
+                        complete_values[i].value = strdup("0");
+                        complete_values[i].valueType = strdup("TIMESTAMP");
+                        break;
+                    default:
+                        complete_values[i].value = strdup("NULL");
+                        complete_values[i].valueType = strdup("String");
+                        break;
+                }
+            } else {
+                // Copiază valoarea direct
+                complete_values[i].value = strdup(stmt->insertStmt.values[i].value);
+                
+                // Asigură-te că valueType corespunde tipului coloanei
+                switch (metadata->column_types[i]) {
+                    case TYPE_INT:
+                        complete_values[i].valueType = strdup("Int");
+                        break;
+                    case TYPE_FLOAT:
+                        complete_values[i].valueType = strdup("FLOAT");
+                        break;
+                    case TYPE_VARCHAR:
+                        complete_values[i].valueType = strdup("String");
+                        break;
+                    case TYPE_TIMESTAMP:
+                        complete_values[i].valueType = strdup("TIMESTAMP");
+                        break;
+                    default:
+                        complete_values[i].valueType = strdup("String");
+                        break;
+                }
+            }
+        }
+    } else {
+        // Cazul când coloanele sunt specificate - trebuie să le mapăm la pozițiile corecte
+        for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
+            bool column_found = false;
+            
+            for (uint32_t j = 0; j < metadata->num_columns; j++) {
+                if (strcmp(stmt->insertStmt.columns[i], metadata->column_names[j]) == 0) {
+                    // Eliberăm valorile implicite
+                    free(complete_values[j].value);
+                    free(complete_values[j].valueType);
+                    
+                    // Verificăm dacă valoarea este NULL
+                    if (!stmt->insertStmt.values[i].value || 
+                        strcmp(stmt->insertStmt.values[i].value, "NULL") == 0) {
+                        // Folosim valoarea implicită pentru tipul acestei coloane
+                        switch (metadata->column_types[j]) {
+                            case TYPE_INT:
+                                complete_values[j].value = strdup("0");
+                                complete_values[j].valueType = strdup("Int");
+                                break;
+                            case TYPE_FLOAT:
+                                complete_values[j].value = strdup("0.0");
+                                complete_values[j].valueType = strdup("FLOAT");
+                                break;
+                            case TYPE_VARCHAR:
+                                complete_values[j].value = strdup("NULL");
+                                complete_values[j].valueType = strdup("String");
+                                break;
+                            case TYPE_TIMESTAMP:
+                                complete_values[j].value = strdup("0");
+                                complete_values[j].valueType = strdup("TIMESTAMP");
+                                break;
+                            default:
+                                complete_values[j].value = strdup("NULL");
+                                complete_values[j].valueType = strdup("String");
+                                break;
+                        }
+                    } else {
+                        // Copiază valoarea direct
+                        complete_values[j].value = strdup(stmt->insertStmt.values[i].value);
+                        
+                        // Asigură-te că valueType corespunde tipului coloanei
+                        switch (metadata->column_types[j]) {
+                            case TYPE_INT:
+                                complete_values[j].valueType = strdup("Int");
+                                break;
+                            case TYPE_FLOAT:
+                                complete_values[j].valueType = strdup("FLOAT");
+                                break;
+                            case TYPE_VARCHAR:
+                                complete_values[j].valueType = strdup("String");
+                                break;
+                            case TYPE_TIMESTAMP:
+                                complete_values[j].valueType = strdup("TIMESTAMP");
+                                break;
+                            default:
+                                complete_values[j].valueType = strdup("String");
+                                break;
+                        }
+                    }
+                    
+                    column_found = true;
+                    break;
+                }
+            }
+            
+            if (!column_found) {
+                printf("Warning: Column '%s' does not exist in table '%s'\n", 
+                      stmt->insertStmt.columns[i], metadata->table_name);
+            }
+        }
+    }
+    
+    // Eliberăm vechea structură de valori
+    for (int i = 0; i < stmt->insertStmt.num_values; i++) {
+        free(stmt->insertStmt.values[i].value);
+        free(stmt->insertStmt.values[i].valueType);
+    }
+    free(stmt->insertStmt.values);
+    
+    // Eliberăm și vechiul array de coloane dacă există
+    for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
+        free(stmt->insertStmt.columns[i]);
+    }
+    free(stmt->insertStmt.columns);
+    
+    // Alocă noul array de coloane
+    stmt->insertStmt.columns = malloc(sizeof(char*) * metadata->num_columns);
+    if (!stmt->insertStmt.columns) {
+        perror("Failed to allocate memory for column names");
+        
+        // Eliberăm complete_values dacă alocarea eșuează
+        for (uint32_t i = 0; i < metadata->num_columns; i++) {
+            free(complete_values[i].value);
+            free(complete_values[i].valueType);
+        }
+        free(complete_values);
+        return;
+    }
+    
+    // Copiază numele coloanelor din metadata
+    for (uint32_t i = 0; i < metadata->num_columns; i++) {
+        stmt->insertStmt.columns[i] = strdup(metadata->column_names[i]);
+    }
+    
+    // Actualizează statement-ul
+    stmt->insertStmt.values = complete_values;
+    stmt->insertStmt.num_values = metadata->num_columns;
+    stmt->insertStmt.num_columns = metadata->num_columns;
+}
 
 void process_statement(Statement *stmt) {
 
     switch (stmt->type) {
         case STATEMENT_INSERT: {
+            global_id = 1;
             if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
                 printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
                 break;
@@ -137,9 +351,10 @@ void process_statement(Statement *stmt) {
             }
             deserialize_metadata(db, metadata);
 
-            // if(stmt->insertStmt.columns != NULL){
-            //     preprocess_insert_statement(stmt, metadata);
-            // }
+            replace_null_values(stmt, metadata);
+            if(stmt->insertStmt.columns != NULL){
+                preprocess_insert_statement(stmt, metadata);
+            }
             if(root!=NULL){
                 if(verify_constraints(stmt, metadata) == false) {
                     printf("        Error: Constraints not met\n");
@@ -424,29 +639,85 @@ void free_memory(Statement* stmt) {
 }
 
 void free_statement(Statement *stmt) {
-    if (stmt->type == STATEMENT_INSERT) {
-        for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
-            free(stmt->insertStmt.columns[i]);
-        }
-        free(stmt->insertStmt.columns);
+    if (!stmt) return;
+    
+    switch (stmt->type) {
+        case STATEMENT_INSERT:
+            if (stmt->insertStmt.columns) {
+                for (int i = 0; i < stmt->insertStmt.num_columns; i++) {
+                    free(stmt->insertStmt.columns[i]);
+                }
+                free(stmt->insertStmt.columns);
+            }
 
-        for (int i = 0; i < stmt->insertStmt.num_values; i++) {
-            free(stmt->insertStmt.values[i].value);
-            free(stmt->insertStmt.values[i].valueType);
-        }
-        free(stmt->insertStmt.values);
+            if (stmt->insertStmt.values) {
+                for (int i = 0; i < stmt->insertStmt.num_values; i++) {
+                    free(stmt->insertStmt.values[i].value);
+                    free(stmt->insertStmt.values[i].valueType);
+                }
+                free(stmt->insertStmt.values);
+            }
 
-        free(stmt->insertStmt.table);
-    } else if (stmt->type == STATEMENT_SELECT) {
-        for (int i = 0; i < stmt->selectStmt.num_columns; i++) {
-            free(stmt->selectStmt.columns[i]);
-        }
-        free(stmt->selectStmt.columns);
-        free(stmt->selectStmt.table);
-        if (stmt->selectStmt.condition) {
-            free(stmt->selectStmt.condition);
-        }
+            free(stmt->insertStmt.table);
+            break;
+            
+        case STATEMENT_SELECT:
+            if (stmt->selectStmt.columns) {
+                for (int i = 0; i < stmt->selectStmt.num_columns; i++) {
+                    free(stmt->selectStmt.columns[i]);
+                }
+                free(stmt->selectStmt.columns);
+            }
+            free(stmt->selectStmt.table);
+            if (stmt->selectStmt.condition) {
+                free(stmt->selectStmt.condition);
+            }
+            break;
+            
+        case STATEMENT_CREATE:
+            if (stmt->createStmt.columns) {
+                for (int i = 0; i < stmt->createStmt.num_columns; i++) {
+                    free(stmt->createStmt.columns[i].column_name);
+                    free(stmt->createStmt.columns[i].type);
+                }
+                free(stmt->createStmt.columns);
+            }
+            free(stmt->createStmt.table);
+            break;
+            
+        case STATEMENT_DROP:
+            free(stmt->dropStmt.table);
+            break;
+            
+        case STATEMENT_CREATE_DB:
+            free(stmt->createDbStmt.database);
+            break;
+            
+        case STATEMENT_DROP_DB:
+            free(stmt->dropDbStmt.database);
+            break;
+            
+        case STATEMENT_USE_DB:
+            free(stmt->useDbStmt.database);
+            break;
+            
+        case STATEMENT_SHOW_DB:
+        case STATEMENT_SHOW_TB:
+            // Nu avem nimic de eliberat pentru aceste tipuri
+            break;
+            
+        case STATEMENT_DESC_TB:
+            free(stmt->descTbStmt.table);
+            break;
+            
+        default:
+            // Pentru orice alt tip necunoscut, nu facem nimic
+            break;
     }
+    root = NULL;
+    visited_count = 0;
+    serialized_count = 0;
+    global_id = 1;
 }
 
 

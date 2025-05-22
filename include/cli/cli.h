@@ -9,5 +9,6 @@
 #include "statement_ops.h"
 
 int cli();
+int free_memory(Statement* stmt);
 
 #endif 
