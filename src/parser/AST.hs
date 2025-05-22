@@ -12,14 +12,16 @@ data SQLValue
     | SQLFloat Float
     | SQLDate String
     | SQLBool Bool
+    | SQLNull
     deriving (Show, Generic)
 
 instance ToJSON SQLValue where
     toJSON (SQLString s) = object ["valueType" .= ("String" :: String), "value" .= s]
-    toJSON (SQLInt i) = object ["valueType" .= ("Int" :: String), "value" .= i]
-    toJSON (SQLFloat f) = object ["valueType" .= ("Float" :: String), "value" .= f]
-    toJSON (SQLDate d) = object ["valueType" .= ("Date" :: String), "value" .= d]
-    toJSON (SQLBool b) = object ["valueType" .= ("Bool" :: String), "value" .= b]
+    toJSON (SQLInt i)    = object ["valueType" .= ("Int" :: String), "value" .= i]
+    toJSON (SQLFloat f)  = object ["valueType" .= ("Float" :: String), "value" .= f]
+    toJSON (SQLDate d)   = object ["valueType" .= ("Date" :: String), "value" .= d]
+    toJSON (SQLBool b)   = object ["valueType" .= ("Bool" :: String), "value" .= b]
+    toJSON SQLNull       = object ["valueType" .= ("Null" :: String), "value" .= ("NULL" :: String)]
 
 data ConstraintType = NotNull | Unique | PrimaryKey | ForeignKey
     deriving (Show, Generic)

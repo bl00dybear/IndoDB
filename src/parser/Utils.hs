@@ -27,11 +27,15 @@ stringCI s = try $ do
     zipWithM matchChar s =<< count (length s) anyChar
 
 parseValue :: Parser SQLValue
-parseValue = lexeme (try parseDate
+parseValue = lexeme (try parseNull
+         <|> try parseDate
          <|> try parseFloat
          <|> try parseInt
          <|> try parseString
          <|> try parseBool)
+
+parseNull :: Parser SQLValue
+parseNull = stringCI "null" $> SQLNull
 
 parseString :: Parser SQLValue
 parseString = lexeme $ do
