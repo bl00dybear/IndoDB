@@ -77,23 +77,25 @@ int parse_statement(const char *filename, Statement *stmt) {
         cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
         cJSON *values = cJSON_GetObjectItemCaseSensitive(json, "values");
 
-        int num_columns = cJSON_GetArraySize(columns);
         int num_values = cJSON_GetArraySize(values);
+
+        // Verificăm dacă "columns" este null sau absent
+        int num_columns = 0;
+        if (columns && cJSON_IsArray(columns)) {
+            num_columns = cJSON_GetArraySize(columns);
+            stmt->insertStmt.columns = malloc(num_columns * sizeof(char*));
+            for (int i = 0; i < num_columns; i++) {
+                cJSON *col = cJSON_GetArrayItem(columns, i);
+                stmt->insertStmt.columns[i] = strdup(col->valuestring);
+            }
+        } else {
+            stmt->insertStmt.columns = NULL;
+        }
 
         stmt->insertStmt.num_columns = num_columns;
         stmt->insertStmt.num_values = num_values;
-        // printf("Nr. coloane: %d\n", stmt->insertStmt.num_columns);
-        // printf("Nr. valori: %d\n", stmt->insertStmt.num_values);
-
-        stmt->insertStmt.columns = malloc(num_columns * sizeof(char*));
-        for (int i = 0; i < num_columns; i++) {
-            cJSON *col = cJSON_GetArrayItem(columns, i);
-            stmt->insertStmt.columns[i] = strdup(col->valuestring);
-            // printf("Coloana: %s\n", stmt->insertStmt.columns[i]);
-        }
 
         stmt->insertStmt.table = strdup(table->valuestring);
-        // printf("Nume tabel: %s\n", stmt->insertStmt.table);
 
         stmt->insertStmt.values = malloc(num_values * sizeof(*stmt->insertStmt.values));
         for (int i = 0; i < num_values; i++) {
@@ -103,20 +105,16 @@ int parse_statement(const char *filename, Statement *stmt) {
 
             if (cJSON_IsString(val)) {
                 stmt->insertStmt.values[i].value = strdup(val->valuestring);
-                // printf("Value String: %s\n", stmt->insertStmt.values[i].value);
             } else if (cJSON_IsNumber(val)) {
-                // se transforma int in char* pt ca asa e stocat in struct
                 char buffer[32];
                 snprintf(buffer, sizeof(buffer), "%g", val->valuedouble);
                 stmt->insertStmt.values[i].value = strdup(buffer);
-                // printf("Value Int: %s\n", stmt->insertStmt.values[i].value);
             } else {
                 printf("Unsupported value type in JSON!\n");
                 exit(1);
             }
 
             stmt->insertStmt.values[i].valueType = strdup(valType->valuestring);
-            // printf("Value Type: %s\n", stmt->insertStmt.values[i].valueType);
         }
     } else if (strcmp(statement_type->valuestring, "SelectStmt") == 0) {
         stmt->type = STATEMENT_SELECT;
