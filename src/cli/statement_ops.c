@@ -107,7 +107,6 @@ void process_statement(Statement *stmt) {
             strcat(dbfilepath, "/btree");
             strcat(dbfilepath, stmt->createStmt.table); 
             strcat(dbfilepath, ".bin");
-            printf("%s\n", dbfilepath);
             if(access(dbfilepath, F_OK) == 0) {
                 printf("Error: Table '%s' already exists.\n", stmt->createStmt.table);
                 break;
