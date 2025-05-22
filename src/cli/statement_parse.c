@@ -143,17 +143,14 @@ int parse_statement(const char *filename, Statement *stmt) {
         if (cJSON_IsNull(condition)) {
             stmt->selectStmt.cond_column = NULL;
         } else {
-            int capacity = 4;
+            int capacity = 100;
             int count = 0;
             char **cond_columns = malloc(capacity * sizeof(char*));
 
             collect_columns_from_condition(condition, &cond_columns, &count, &capacity);
 
             stmt->selectStmt.cond_column = cond_columns;
-            printf("Coloane din conditie:\n");
-            for (int i = 0; i < count; i++) {
-                printf(" - %s\n", cond_columns[i]);
-            }
+            stmt->selectStmt.num_cond_columns = count;
         }
     } else if(strcmp(statement_type->valuestring, "CreateStmt") == 0) {
         stmt->type = STATEMENT_CREATE;

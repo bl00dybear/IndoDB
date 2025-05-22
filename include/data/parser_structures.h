@@ -41,6 +41,7 @@ typedef struct {
     char *table;
     char *condition;
     char **cond_column;
+    int num_cond_columns;
 } SelectStmtStruct;
 
 typedef struct {

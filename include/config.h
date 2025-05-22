@@ -24,5 +24,8 @@ extern char DATA_FILENAME[256];
 
 #define MAX_HISTORY 100
 
+#define AST_PATH "../output/expr_cond"
+#define AST_FILE_NAME "expr_cond"
+
 
 #endif

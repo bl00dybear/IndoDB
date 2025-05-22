@@ -72,14 +72,27 @@ parseInput s = Map.fromList $ parseWords (words s)
     parseWords _ = []
 
 -- Main
+-- Main modificat pentru procesare continuă
 main :: IO ()
 main = do
-  jsonData <- B.readFile "output.json"
+  hSetBuffering stdout NoBuffering
+  hSetBuffering stdin LineBuffering
+  jsonData <- B.readFile "../output/output.json"
   let mQuery = decode jsonData :: Maybe Query
   case mQuery of
     Nothing -> putStrLn "Invalid JSON."
-    Just query -> do
+    Just query -> processInputs query
+
+-- Funcție care procesează inputuri continuu
+processInputs :: Query -> IO ()
+processInputs query = do
+  eof <- isEOF
+  if eof
+    then return ()
+    else do
       input <- getLine
       let row = parseInput input
           result = evalCondition (condition query) row
       putStrLn $ if result then "True" else "False"
+      hFlush stdout  -- Asigură-te că output-ul este trimis imediat
+      processInputs query  -- Procesează următorul input

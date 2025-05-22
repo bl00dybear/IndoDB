@@ -505,40 +505,31 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
         return;
     }
     
-    // Verificăm nodurile duplicate pentru a evita cicluri infinite
-    static void* visited_nodes[MAX_VISITED_NODES] = {0};  // Stocăm ultimele 1000 noduri vizitate
+    static void* visited_nodes[MAX_VISITED_NODES] = {0};  
     static int visited_count = 0;
     
-    // Verifică dacă nodul a fost deja vizitat
     for (int v = 0; v < visited_count; v+=1) {
         if (visited_nodes[v] == node) {
-            // Am detectat un ciclu, oprim traversarea
             return;
         }
     }
     
-    // Adaugă nodul la lista de noduri vizitate
     if (visited_count < MAX_VISITED_NODES) {
-        visited_nodes[visited_count+=1] = node;
+        visited_nodes[visited_count++] = node;
     } else {
-        // Resetăm array-ul dacă depășim limita
         visited_count = 0;
-        visited_nodes[visited_count+=1] = node;
+        visited_nodes[visited_count++] = node;
     }
 
-    // Afișează rândurile din nodul curent
     for (int i = 1; i <= node->num_keys && i < ROW_MAX_KEYS; i+=1) {
         uint64_t offset = (uint64_t)node->raw_data[i];
         
-        // Verifică dacă offsetul e valid
         if (offset == 0 || offset >= df->size) {
-            // Offset invalid, trecem la următorul rând
             continue;
         }
         
         void *row_content = df->start_ptr + offset;
         
-        // Verificare rapidă a dimensiunii rândului
         uint64_t row_size;
         memcpy(&row_size, row_content, sizeof(uint64_t));
         
@@ -554,14 +545,11 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
         print_separator(num_columns);
     }
 
-    // Traversează recursiv nodurile copil, cu verificări de siguranță
     if (node->plink != NULL) {
         for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i+=1) {
             if (node->plink[i] != NULL) {
-                // Verificări suplimentare de validitate
                 if ((uintptr_t)node->plink[i] < 1000 || 
                     (uintptr_t)node->plink[i] > (uintptr_t)df->start_ptr + df->size) {
-                    // Pointer suspect sau în afara limitelor, ignoră
                     continue;
                 }
                 
@@ -570,11 +558,329 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
         }
     }
     
-    // Când ieșim din recursivitate, eliminăm nodul din lista de vizitate
     if (visited_count > 0) {
         visited_count--;
     }
 }
+
+// void send_column_values_to_ast(int* pipe_to_ast, int* column_indexes, int num_columns, MetadataPage *metadata, Statement *stmt) {
+//     for (int i = 0; i < num_columns; i+=1) {
+//         uint32_t col_index = column_indexes[i];
+//         if (col_index >= metadata->num_columns) {
+//             fprintf(stderr, "Error: Column index %d out of bounds\n", col_index);
+//             continue;
+//         }
+        
+//         char* column_name = metadata->column_names[col_index];
+//         write(pipe_to_ast[1], column_name, strlen(column_name));
+//         write(pipe_to_ast[1], "\n", 1);
+//     }
+// }
+
+void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pipe_from_ast,
+                                       char **cond_columns, MetadataPage *metadata,
+                                       int* column_indexes, int num_columns, int num_cond_columns) {
+    if (node == NULL) {
+        return;
+    }
+    
+    // Detectarea ciclurilor cu vizitare de noduri
+    static void* visited_nodes[1000] = {0};
+    static int visited_count = 0;
+    
+    for (int v = 0; v < visited_count; v++) {
+        if (visited_nodes[v] == node) {
+            return;
+        }
+    }
+    
+    if (visited_count < 1000) {
+        visited_nodes[visited_count++] = node;
+    } else {
+        visited_count = 0;
+        visited_nodes[visited_count++] = node;
+    }
+    
+    // Parcurgem rândurile din nod
+    for (int i = 1; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
+
+        uint64_t offset = (uint64_t)node->raw_data[i];
+        
+        // Verifică dacă offsetul e valid
+        if (offset == 0 || offset >= df->size) {
+            continue;
+        }
+        
+        void *row_content = df->start_ptr + offset;
+        
+        // Verificare rapidă a dimensiunii rândului
+        uint64_t row_size;
+        memcpy(&row_size, row_content, sizeof(uint64_t));
+        
+        if (row_size < 9 || row_size > MAX_BUFFER_SIZE) {
+            continue;
+        }
+        
+        // Extrage valorile pentru coloanele din condiție
+        char condition_data[4096] = {0};
+        int condition_data_len = 0;
+        
+        // Deserializează datele rândului
+        bool flag;
+        memcpy(&flag, row_content + 8, sizeof(bool));
+        
+        void* row_content_mem = malloc(row_size-9);
+        if (!row_content_mem) {
+            fprintf(stderr, "Error: Memory allocation failed\n");
+            continue;
+        }
+        memcpy(row_content_mem, row_content+9, row_size-9);
+        
+        uint64_t row_byte_index = 0;
+        
+        // Structura pentru stocarea valorilor coloanelor
+        typedef struct {
+            int type;
+            union {
+                char* str_value;
+                int64_t int_value;
+            };
+            uint32_t str_len;
+        } ColumnValue;
+        
+        // Citim toate valorile din rând
+        ColumnValue values[MAX_COLUMNS];
+        
+        // Inițializare
+        for (uint64_t col = 0; col < metadata->num_columns; col++) {
+            values[col].type = -1;
+            values[col].str_value = NULL;
+        }
+        
+        // Deserializare date
+        for (uint64_t col = 0; col < metadata->num_columns; col++) {
+            values[col].type = metadata->column_types[col];
+            
+            if (row_byte_index >= row_size-9) {
+                goto cleanup_row;
+            }
+            
+            switch (values[col].type) {
+                case TYPE_VARCHAR: {
+                    if (row_byte_index + sizeof(uint32_t) > row_size-9) {
+                        goto cleanup_row;
+                    }
+                    
+                    uint32_t string_len;
+                    memcpy(&string_len, row_content_mem + row_byte_index, sizeof(uint32_t));
+                    row_byte_index += sizeof(uint32_t);
+                    
+                    if (string_len > MAX_BUFFER_SIZE || row_byte_index + string_len > row_size-9) {
+                        goto cleanup_row;
+                    }
+                    
+                    values[col].str_value = malloc(string_len + 1);
+                    if (!values[col].str_value) {
+                        goto cleanup_row;
+                    }
+                    
+                    memcpy(values[col].str_value, row_content_mem + row_byte_index, string_len);
+                    values[col].str_value[string_len] = '\0';
+                    values[col].str_len = string_len;
+                    row_byte_index += string_len;
+                    break;
+                }
+                case TYPE_INT: {
+                    if (row_byte_index + sizeof(int64_t) > row_size-9) {
+                        goto cleanup_row;
+                    }
+                    
+                    memcpy(&values[col].int_value, row_content_mem + row_byte_index, sizeof(int64_t));
+                    row_byte_index += sizeof(int64_t);
+                    break;
+                }
+                default:
+                    values[col].type = -1;
+                    break;
+            }
+        }
+
+        // printf(cond_columns);
+
+        // Format the condition data
+        condition_data_len = 0;
+        for (int j = 0; j < num_cond_columns; j++) {
+            // select * from angajati where salariu > 3000 and varsta > 25;
+            // Find column index
+            int col_idx = -1;
+            for (uint64_t c = 0; c < metadata->num_columns; c++) {
+                if (strcmp(cond_columns[j], metadata->column_names[c]) == 0) {
+                    col_idx = c;
+                    break;
+                }
+            }
+
+            if (col_idx == -1) {
+                // Column not found, skip this row
+                goto cleanup_row;
+            }
+            
+            // Add column name
+            int written = snprintf(condition_data + condition_data_len, 
+                                 sizeof(condition_data) - condition_data_len,
+                                 "%s ", cond_columns[j]);
+            condition_data_len += written;
+            
+            // Add column value
+            if (values[col_idx].type == TYPE_VARCHAR) {
+                written = snprintf(condition_data + condition_data_len,
+                                 sizeof(condition_data) - condition_data_len,
+                                 "\"%s\" ", values[col_idx].str_value);
+            } else if (values[col_idx].type == TYPE_INT) {
+                written = snprintf(condition_data + condition_data_len,
+                                 sizeof(condition_data) - condition_data_len,
+                                 "%ld ", values[col_idx].int_value);
+            } else {
+                written = snprintf(condition_data + condition_data_len,
+                                 sizeof(condition_data) - condition_data_len,
+                                 "NULL ");
+            }
+            condition_data_len += written;
+        }
+
+        condition_data[condition_data_len] = '\n';
+        condition_data_len++;
+        
+        condition_data[condition_data_len] = '\0';
+        
+        printf("Condition data: %s\n", condition_data);
+
+        printf("\n");
+
+        // Send data to child process for evaluation
+        if (write(pipe_to_ast, condition_data, condition_data_len) == -1) {
+            fprintf(stderr, "Error writing to pipe\n");
+            goto cleanup_row;
+        }
+        
+        fprintf(stderr, "Data sent to child [%d bytes]: %s\n", condition_data_len, condition_data);
+        fflush(stderr);  // Opțional pentru stderr
+
+        // Read response from child process
+        char response[10] = {0};
+        ssize_t bytes_read = read(pipe_from_ast, response, sizeof(response) - 1);
+        
+        if (bytes_read <= 0) {
+            fprintf(stderr, "Error reading from pipe or child exited\n");
+            goto cleanup_row;
+        }
+        
+        // Check if condition was true
+        if (strncmp(response, "True", 4) == 0) {
+            // Display this row
+            printf("|");
+            print_row_content(row_content, metadata, column_indexes, num_columns);
+            printf("\n");
+            print_separator(num_columns);
+        }
+        
+    cleanup_row:
+        // Free allocated memory
+        for (uint64_t col = 0; col < metadata->num_columns; col++) {
+            if (values[col].type == TYPE_VARCHAR && values[col].str_value != NULL) {
+                free(values[col].str_value);
+                values[col].str_value = NULL;
+            }
+        }
+        
+        if (row_content_mem) {
+            free(row_content_mem);
+        }
+    }
+    
+    // Recursively process child nodes
+    if (node->plink != NULL) {
+        for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
+            if (node->plink[i] != NULL) {
+                if ((uintptr_t)node->plink[i] < 1000 || 
+                    (uintptr_t)node->plink[i] > (uintptr_t)df->start_ptr + df->size) {
+                    continue;
+                }
+                
+                recursive_display_rows_where_clause(node->plink[i], pipe_to_ast, pipe_from_ast,
+                                                 cond_columns, metadata, column_indexes, num_columns, num_cond_columns);
+            }
+        }
+    }
+    
+    // Unmark this node as visited when we're done with it
+    if (visited_count > 0) {
+        visited_count--;
+    }
+}
+
+
+void display_rows_where_clause(char **cond_columns, RowNode *node, MetadataPage *metadata, Statement *stmt,
+                                                                        int* column_indexes, int num_columns, int num_cond_columns) {
+
+
+    int pipe_to_ast[2];
+    int pipe_from_ast[2];
+
+    pid_t pid ;
+
+    if(!(~(pipe(pipe_to_ast))) || !(~(pipe(pipe_from_ast)))) {
+        perror("Error creating pipes");
+        exit(EXIT_FAILURE);
+    }
+
+    if(!(~(pid = fork()))) {
+        perror("Error forking");
+        close(pipe_to_ast[0]);
+        close(pipe_to_ast[1]);
+        close(pipe_from_ast[0]);
+        close(pipe_from_ast[1]);
+        exit(EXIT_FAILURE);
+    }
+
+    if(!pid){
+        close(pipe_to_ast[1]);
+        dup2(pipe_to_ast[0],STDIN_FILENO);
+        close(pipe_to_ast[0]);
+
+        close(pipe_from_ast[0]);
+        dup2(pipe_from_ast[1],STDOUT_FILENO);
+        close(pipe_from_ast[1]);
+
+        if (access(AST_PATH, X_OK) != 0) {
+            perror("Cannot access AST executable");
+            exit(EXIT_FAILURE);
+        }
+
+        execl(AST_PATH,AST_FILE_NAME,NULL);
+
+        perror("Error executing AST");
+        exit(EXIT_FAILURE);
+    }else{
+        close(pipe_to_ast[0]);
+        close(pipe_from_ast[1]);
+
+        recursive_display_rows_where_clause(node, pipe_to_ast[1], pipe_from_ast[0], 
+                                          cond_columns, metadata, column_indexes, num_columns, num_cond_columns);
+        
+        // Închidem pipe-urile rămase
+        close(pipe_to_ast[1]);
+        close(pipe_from_ast[0]);
+        
+        // Așteptăm terminarea procesului copil
+        int status;
+        waitpid(pid, &status, 0);
+
+        close(pipe_from_ast[0]);
+    }
+    
+}
+
 
 void display_table(char **columns, int num_columns, MetadataPage *meta, Statement *stmt) {
     int *column_indexes = display_table_anthet(columns, num_columns, meta);
@@ -584,10 +890,21 @@ void display_table(char **columns, int num_columns, MetadataPage *meta, Statemen
     }
     
     RowNode *node = root;
-    display_all_rows(node, meta, column_indexes, num_columns);
-    printf("\n");
 
-    free(column_indexes);
+    // if (stmt->selectStmt.cond_column == NULL) {
+        display_all_rows(node, meta, column_indexes, num_columns);
+        printf("\n");
+
+        free(column_indexes);
+
+
+        printf("se intoarce din dispaly");
+    // }
+    // else {
+    //     display_rows_where_clause(stmt->selectStmt.cond_column,node, meta, stmt, column_indexes, num_columns, stmt->selectStmt.num_cond_columns);
+    //     printf("\n");
+    //     free(column_indexes);
+    // }
 }
 
 
