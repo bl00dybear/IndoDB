@@ -14,6 +14,20 @@ void enable_raw_mode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
+int is_exit_or_quit(const char *line) {
+    char lower[MAX_INPUT_SIZE];
+    size_t len = strlen(line);
+    for (size_t i = 0; i < len && i < MAX_INPUT_SIZE - 1; ++i) {
+        lower[i] = tolower(line[i]);
+    }
+    lower[len] = '\0';
+
+    if (strcmp(lower, "exit") == 0 || strcmp(lower, "exit;") == 0 ||
+        strcmp(lower, "quit") == 0 || strcmp(lower, "quit;") == 0) {
+        return 1;
+    }
+    return 0;
+}
 
 int read_line(char *buf, size_t size) {
     int len = 0, pos = 0, hist_pos = hist_len;
@@ -87,7 +101,6 @@ int read_line(char *buf, size_t size) {
     }
 }
 
-
 int cli() {
     char input[MAX_INPUT_SIZE];
     char line[MAX_INPUT_SIZE];
@@ -105,17 +118,15 @@ int cli() {
                 line[len - 1] = '\0'; len--;
             }
 
-            if ((strcmp(line, "EXIT;") == 0) || (strcmp(line, "exit;") == 0)) {
+            if (is_exit_or_quit(line)) {
                 printf("Exiting IndoDB...\n");
                 fflush(stdout);
                 return 0;
             }
 
-            if (strcmp(line, "CLEAR;") == 0) {
-                printf("\033[H\033[J");
-                printf("IndoDB> ");
-                fflush(stdout);
-                continue;
+            if (strlen(line) == 0 && strlen(input) == 0) {
+                // Linia e goală și nu avem input acumulat — restart prompt
+                break;
             }
 
             if (strlen(input) + strlen(line) + 2 < MAX_INPUT_SIZE) {
@@ -133,7 +144,6 @@ int cli() {
             printf("     -> ");
             fflush(stdout);
         }
-
 
         if (strlen(input) > 0) {
             FILE *fp = popen("../output/sql_parser", "w");

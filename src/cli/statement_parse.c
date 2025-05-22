@@ -1,6 +1,5 @@
 #include "../include/cli/statement_parse.h"
 
-
 int parse_statement(const char *filename, Statement *stmt) {
     // Este deschis fisierul output.json
     FILE *fp = fopen(filename, "r");
@@ -210,6 +209,15 @@ int parse_statement(const char *filename, Statement *stmt) {
 
         cJSON *database = cJSON_GetObjectItemCaseSensitive(json, "database");
         stmt->useDbStmt.database = strdup(database->valuestring);
+    } else if (strcmp(statement_type->valuestring, "ShowDbStmt") == 0) {
+        stmt->type = STATEMENT_SHOW_DB;
+    } else if (strcmp(statement_type->valuestring, "ShowTbStmt") == 0) {
+        stmt->type = STATEMENT_SHOW_TB;
+    } else if (strcmp(statement_type->valuestring, "DescTbStmt") == 0) {
+        stmt->type = STATEMENT_DESC_TB;
+
+        cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
+        stmt->descTbStmt.table = strdup(table->valuestring);
     } else {
         printf("Unknown statement type: %s\n", statement_type->valuestring);
         return 1;

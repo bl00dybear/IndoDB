@@ -11,6 +11,9 @@ typedef enum {
     STATEMENT_CREATE_DB,
     STATEMENT_DROP_DB,
     STATEMENT_USE_DB,
+    STATEMENT_SHOW_DB,
+    STATEMENT_SHOW_TB,
+    STATEMENT_DESC_TB,
 } StatementType;
 
 // typedef enum {
@@ -67,6 +70,16 @@ typedef struct {
 } UseDbStmtStruct;
 
 typedef struct {
+} ShowDbStmtStruct;
+
+typedef struct {
+} ShowTbStmtStruct;
+
+typedef struct {
+    char *table;
+} DescTbStmtStruct;
+
+typedef struct {
     StatementType type;
     union {
         InsertStmtStruct insertStmt;
@@ -76,6 +89,9 @@ typedef struct {
         CreateDbStmtStruct createDbStmt;
         DropDbStmtStruct dropDbStmt;
         UseDbStmtStruct useDbStmt;
+        ShowDbStmtStruct showDbStmt;
+        ShowTbStmtStruct showTbStmt;
+        DescTbStmtStruct descTbStmt;
     };
 } Statement;
 
