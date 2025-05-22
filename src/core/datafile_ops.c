@@ -644,26 +644,36 @@ void set_table_parameters(MetadataPage *metadata, Statement *stmt) {
 }
 
 bool is_data_in_row(int column_index, void* row_content,Statement* stmt) {
-        for(int col = 0; col < metadata->num_columns; col+=1){
+    for(int col = 0; col < metadata->num_columns; col+=1){
+        row_content += 8;
+
+        bool flag;
+        memcpy(&flag, row_content, sizeof(bool));
+        row_content += sizeof(bool);
+
+        if(flag){
             if(metadata->column_types[col] == TYPE_VARCHAR){
                 uint32_t string_length;
                 memcpy(&string_length, row_content, sizeof(uint32_t));
                 row_content += sizeof(uint32_t);
+
 
                 if(col == column_index){
                     void* string_content = malloc(string_length+1);
                     memcpy(string_content, row_content, string_length);
                     ((char*)string_content)[string_length] = '\0';
 
+
                     if(strcmp(string_content,stmt->insertStmt.values[column_index].value) == 0){
                         free(string_content);
                         return true;
                     }
+                    
                     free(string_content);
                     return false;
                 }
                 row_content += string_length;
-                
+            
             } else if(metadata->column_types[col] == TYPE_INT){
                 int64_t value;
                 memcpy(&value, row_content, sizeof(int64_t));
@@ -676,7 +686,10 @@ bool is_data_in_row(int column_index, void* row_content,Statement* stmt) {
                     return false;
                 }
             } 
+        }else{
+            return false;
         }
+    }
 }
 
 bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int column_index) {
@@ -685,6 +698,8 @@ bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int
         return false;
     }
 
+    // printf("Checking constraint unique for node %p\n", node);
+
     for(int i=1; i<= node->num_keys; i+=1){
         uint64_t offset = (uint64_t)node->raw_data[i];
         if(offset == 0 || offset >= df->size){
@@ -692,10 +707,8 @@ bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int
         }
         void *row_content = df->start_ptr + offset;
 
-        uint64_t row_byte_index = 0;
-
         if(is_data_in_row(column_index, row_content,stmt)){
-            return true; 
+            return false; 
         }
 
     }
@@ -708,5 +721,5 @@ bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int
         }
     }
 
-    return false;
+    return true;
 }

@@ -9,6 +9,7 @@
 
 void process_statement(Statement *stmt);
 void free_statement(Statement *stmt);
+bool verify_constraints(Statement *stmt, MetadataPage *metadata);
 
 
 #endif 

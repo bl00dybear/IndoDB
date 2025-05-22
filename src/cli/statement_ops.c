@@ -15,9 +15,13 @@ void process_statement(Statement *stmt) {
             }
             deserialize_metadata(db, metadata);
 
-            for(int i = 0; i < metadata->num_columns; i++) {
-                
+            if(root!=NULL){
+                if(verify_constraints(stmt, metadata) == false) {
+                    printf("        Error: Constraints not met\n");
+                    break;
+                }
             }
+
 
             // printf("metadata->table_name: %s\n", metadata->table_name);
             // printf("metadata ->num_columns: %d\n", metadata->num_columns);
@@ -328,19 +332,24 @@ void free_statement(Statement *stmt) {
 }
 
 
-void verify_constraints(Statement *stmt, MetadataPage *metadata) {
+bool verify_constraints(Statement *stmt, MetadataPage *metadata) {
+
     for(int i = 0; i < metadata->num_columns; i++) {
+
+        // printf("Column constraint: %d\n", metadata->column_constraints[i]);
+
+
         if (metadata->column_constraints[i] == CONSTRAINT_NOT_NULL) {
             // Check if the value is NULL
             if (stmt->insertStmt.values[i].value == NULL) {
                 printf("Error: Column %s cannot be NULL\n", metadata->column_names[i]);
-                return;
+                return false;
             }
         } else if (metadata->column_constraints[i] == CONSTRAINT_UNIQUE) {
             bool is_unique = constraint_unique(root, stmt, metadata, i);
             if (!is_unique) {
-                printf("Error: Column %s must be unique\n", metadata->column_names[i]);
-                return;
+                printf("Error: Column \'%s\' must be unique\n", metadata->column_names[i]);
+                return false;
             }
         } else if (metadata->column_constraints[i] == CONSTRAINT_PRIMARY_KEY) {
             // Check for primary key constraints
@@ -350,4 +359,6 @@ void verify_constraints(Statement *stmt, MetadataPage *metadata) {
     // Implement constraint verification logic here
     // For example, check if the values meet the constraints defined in the metadata
     // This is a placeholder function and should be implemented based on your requirements
+
+    return true;
 }
