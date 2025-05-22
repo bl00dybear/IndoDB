@@ -120,6 +120,7 @@ dkms.conf
 
 build/
 database/
+databases/
 output/
 
 ./build
