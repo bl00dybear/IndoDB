@@ -119,7 +119,7 @@ int cli() {
             }
 
             if (is_exit_or_quit(line)) {
-                printf("Exiting IndoDB...\n");
+                printf("Bye\n");
                 fflush(stdout);
                 return 0;
             }
