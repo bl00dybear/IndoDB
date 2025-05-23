@@ -764,6 +764,9 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
         // fflush(stderr);  // Opțional pentru stderr
 
         // Read response from child process
+
+        usleep(100000); // Wait for the child process to finish processing
+
         char response[10] = {0};
         ssize_t bytes_read = read(pipe_from_ast, response, sizeof(response) - 1);
         
@@ -890,10 +893,10 @@ void display_table(char **columns, int num_columns, MetadataPage *meta, Statemen
         display_all_rows(node, meta, column_indexes, num_columns);
         printf("\n");
 
-        printf("DEBUG: Before freeing column_indexes\n");
+        // printf("DEBUG: Before freeing column_indexes\n");
         free(column_indexes);
-        printf("DEBUG: After freeing column_indexes\n");
-        printf("se intoarce din display\n");
+        // printf("DEBUG: After freeing column_indexes\n");
+        // printf("se intoarce din display\n");
     }
     else {
         display_rows_where_clause(stmt->selectStmt.cond_column,node, meta, stmt, column_indexes, num_columns, stmt->selectStmt.num_cond_columns);
