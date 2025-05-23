@@ -334,6 +334,386 @@ void replace_null_values(Statement *stmt, MetadataPage *metadata) {
     stmt->insertStmt.num_values = metadata->num_columns;
     stmt->insertStmt.num_columns = metadata->num_columns;
 }
+void diagnose_display_table(const char* checkpoint, char** columns, int num_columns, 
+                           MetadataPage *metadata, Statement *stmt) {
+    printf("\n============ DIAGNOSTIC %s ============\n", checkpoint);
+    
+    // 1. Verificare parametri de intrare
+    printf("\n[1] PARAMETRI DE INTRARE:\n");
+    printf("  • columns: %p (NULL? %s)\n", (void*)columns, columns ? "Nu" : "Da");
+    printf("  • num_columns: %d\n", num_columns);
+    printf("  • metadata: %p (NULL? %s)\n", (void*)metadata, metadata ? "Nu" : "Da");
+    printf("  • stmt: %p (NULL? %s)\n", (void*)stmt, stmt ? "Nu" : "Da");
+    
+    // 2. Verificare conținut columns dacă există
+    if (columns && num_columns > 0) {
+        printf("\n[2] CONȚINUT COLUMNS:\n");
+        for (int i = 0; i < num_columns && i < 10; i++) {
+            if (columns[i]) {
+                printf("  • columns[%d]: %p → %s\n", i, (void*)columns[i], columns[i]);
+            } else {
+                printf("  • columns[%d]: NULL\n", i);
+            }
+        }
+        if (num_columns > 10) printf("  • [...și încă %d coloane]\n", num_columns - 10);
+    }
+    
+    // 3. Verificare metadata detaliată
+    if (metadata) {
+        printf("\n[3] METADATA DETALIATĂ:\n");
+        printf("  • magic: 0x%lx\n", metadata->magic);
+        printf("  • table_name: %s\n", metadata->table_name);
+        printf("  • num_columns: %u\n", metadata->num_columns);
+        printf("  • root_page_num: %lu\n", metadata->root_page_num);
+        printf("  • last_table_id: %lu\n", metadata->last_table_id);
+        
+        // Verificare coloane cu mai multe detalii
+        if (metadata->num_columns > 0 && metadata->num_columns <= MAX_COLUMNS) {
+            printf("\n[3.1] COLOANE ÎN METADATA:\n");
+            for (uint32_t i = 0; i < metadata->num_columns && i < 10; i++) {
+                printf("  • column[%u]: name=%s, type=%d (", i, metadata->column_names[i], metadata->column_types[i]);
+                
+                // Afișează tipul de date ca text
+                switch (metadata->column_types[i]) {
+                    case TYPE_INT: printf("INT"); break;
+                    case TYPE_FLOAT: printf("FLOAT"); break;
+                    case TYPE_VARCHAR: printf("VARCHAR"); break;
+                    case TYPE_TIMESTAMP: printf("TIMESTAMP"); break;
+                    default: printf("UNKNOWN"); break;
+                }
+                
+                printf("), size=%u, constraint=%d (", metadata->column_sizes[i], metadata->column_constraints[i]);
+                
+                // Afișează constrângerea ca text
+                switch (metadata->column_constraints[i]) {
+                    case CONSTRAINT_NONE: printf("NONE"); break;
+                    case CONSTRAINT_NOT_NULL: printf("NOT NULL"); break;
+                    case CONSTRAINT_UNIQUE: printf("UNIQUE"); break;
+                    case CONSTRAINT_PRIMARY_KEY: printf("PRIMARY KEY"); break;
+                    case CONSTRAINT_FOREIGN_KEY: printf("FOREIGN KEY"); break;
+                    default: printf("UNKNOWN"); break;
+                }
+                
+                printf(")\n");
+            }
+            if (metadata->num_columns > 10) {
+                printf("  • [...și încă %d coloane]\n", metadata->num_columns - 10);
+            }
+        } else if (metadata->num_columns > MAX_COLUMNS) {
+            printf("  • EROARE: num_columns (%u) depășește MAX_COLUMNS (%d)!\n", 
+                  metadata->num_columns, MAX_COLUMNS);
+        }
+        
+        // Verificare bitmap pentru pagini libere (primii 8 bytes)
+        printf("\n[3.2] FREE PAGE BITMAP (primii 8 bytes):\n  • ");
+        for (int i = 0; i < 8 && i < sizeof(metadata->free_page_bitmap); i++) {
+            printf("%02x ", metadata->free_page_bitmap[i]);
+        }
+        printf("\n");
+    }
+    
+    // 4. Verificare stare stmt detaliată
+    if (stmt) {
+        printf("\n[4] STATEMENT DETALIAT (tip: %d):\n", stmt->type);
+        
+        switch (stmt->type) {
+            case STATEMENT_SELECT:
+                printf("  • Tip: SELECT\n");
+                printf("  • table: %s\n", stmt->selectStmt.table ? stmt->selectStmt.table : "NULL");
+                printf("  • num_columns: %d\n", stmt->selectStmt.num_columns);
+                
+                if (stmt->selectStmt.columns) {
+                    printf("\n[4.1] COLOANE ÎN SELECT:\n");
+                    for (int i = 0; i < stmt->selectStmt.num_columns && i < 10; i++) {
+                        if (stmt->selectStmt.columns[i]) {
+                            printf("  • column[%d]: %s\n", i, stmt->selectStmt.columns[i]);
+                        } else {
+                            printf("  • column[%d]: NULL\n", i);
+                        }
+                    }
+                    if (stmt->selectStmt.num_columns > 10) {
+                        printf("  • [...și încă %d coloane]\n", stmt->selectStmt.num_columns - 10);
+                    }
+                } else {
+                    printf("  • columns: NULL\n");
+                }
+                
+                printf("\n[4.2] CONDIȚIE ȘI COLOANE ÎN CONDIȚIE:\n");
+
+                // Verifică adresa condiției fără a o dereferenția
+                printf("  • condition address: %p\n", (void*)&(stmt->selectStmt.condition));
+
+                // Folosește accesare sigură
+                if (&(stmt->selectStmt.condition) != NULL) {
+                    if (stmt->selectStmt.condition != NULL) {
+                        // Verifică dacă adresa este validă înainte de a încerca să citească conținutul
+                        if ((uintptr_t)stmt->selectStmt.condition > 1000) {
+                            printf("  • condition: %s\n", stmt->selectStmt.condition);
+                        } else {
+                            printf("  • condition: <POINTER INVALID: %p>\n", (void*)stmt->selectStmt.condition);
+                        }
+                    } else {
+                        printf("  • condition: NULL\n");
+                    }
+                } else {
+                    printf("  • condition: <CAMP INACCESIBIL>\n");
+                }
+                
+                if (stmt->selectStmt.cond_column) {
+                    printf("  • num_cond_columns: %d\n", stmt->selectStmt.num_cond_columns);
+                    for (int i = 0; i < stmt->selectStmt.num_cond_columns && i < 10; i++) {
+                        if (stmt->selectStmt.cond_column[i]) {
+                            printf("  • cond_column[%d]: %s\n", i, stmt->selectStmt.cond_column[i]);
+                        } else {
+                            printf("  • cond_column[%d]: NULL\n", i);
+                        }
+                    }
+                    if (stmt->selectStmt.num_cond_columns > 10) {
+                        printf("  • [...și încă %d coloane în condiție]\n", 
+                              stmt->selectStmt.num_cond_columns - 10);
+                    }
+                } else {
+                    printf("  • cond_column: NULL\n");
+                }
+                break;
+                
+            case STATEMENT_INSERT:
+                printf("  • Tip: INSERT\n");
+                printf("  • table: %s\n", stmt->insertStmt.table ? stmt->insertStmt.table : "NULL");
+                printf("  • num_columns: %d\n", stmt->insertStmt.num_columns);
+                printf("  • num_values: %d\n", stmt->insertStmt.num_values);
+                break;
+                
+            case STATEMENT_CREATE:
+                printf("  • Tip: CREATE TABLE\n");
+                printf("  • table: %s\n", stmt->createStmt.table ? stmt->createStmt.table : "NULL");
+                printf("  • num_columns: %d\n", stmt->createStmt.num_columns);
+                break;
+                
+            case STATEMENT_DROP:
+                printf("  • Tip: DROP TABLE\n");
+                printf("  • table: %s\n", stmt->dropStmt.table ? stmt->dropStmt.table : "NULL");
+                break;
+                
+            case STATEMENT_CREATE_DB:
+                printf("  • Tip: CREATE DATABASE\n");
+                printf("  • database: %s\n", stmt->createDbStmt.database ? stmt->createDbStmt.database : "NULL");
+                break;
+                
+            case STATEMENT_DROP_DB:
+                printf("  • Tip: DROP DATABASE\n");
+                printf("  • database: %s\n", stmt->dropDbStmt.database ? stmt->dropDbStmt.database : "NULL");
+                break;
+                
+            case STATEMENT_USE_DB:
+                printf("  • Tip: USE DATABASE\n");
+                printf("  • database: %s\n", stmt->useDbStmt.database ? stmt->useDbStmt.database : "NULL");
+                break;
+                
+            case STATEMENT_SHOW_DB:
+                printf("  • Tip: SHOW DATABASES\n");
+                break;
+                
+            case STATEMENT_SHOW_TB:
+                printf("  • Tip: SHOW TABLES\n");
+                break;
+                
+            case STATEMENT_DESC_TB:
+                printf("  • Tip: DESCRIBE TABLE\n");
+                printf("  • table: %s\n", stmt->descTbStmt.table ? stmt->descTbStmt.table : "NULL");
+                break;
+                
+            default:
+                printf("  • Tip: NECUNOSCUT (%d)\n", stmt->type);
+                break;
+        }
+    }
+    
+    // 5. Verificare stare globală
+    printf("\n[5] STARE GLOBALĂ:\n");
+    printf("  • root: %p (NULL? %s)\n", (void*)root, root ? "Nu" : "Da");
+    printf("  • df: %p (NULL? %s)\n", (void*)df, df ? "Nu" : "Da");
+    printf("  • global_id: %lu\n", global_id);
+    printf("  • visited_count: %d\n", visited_count);
+    printf("  • serialized_count: %d\n", serialized_count);
+    printf("  • free_page_queue: %p (NULL? %s)\n", 
+          (void*)free_page_queue, free_page_queue ? "Nu" : "Da");
+    
+    // Verifică starea queue-ului de pagini libere
+    if (free_page_queue) {
+        printf("  • free_page_queue->front: %p\n", (void*)free_page_queue->front);
+        printf("  • free_page_queue->rear: %p\n", (void*)free_page_queue->rear);
+        
+        // Verifică dacă există elemente în queue
+        if (free_page_queue->front) {
+            int count = 0;
+            QueueNode* current = free_page_queue->front;
+            printf("  • Primele pagini libere: ");
+            
+            while (current && count < 5) {
+                printf("%d ", current->data);
+                current = current->next;
+                count++;
+            }
+            
+            if (current) {
+                printf("...\n");
+            } else {
+                printf("\n");
+            }
+        } else {
+            printf("  • Queue gol (front == NULL)\n");
+        }
+    }
+    
+    // 6. Verificare stare Root B-tree
+    if (root) {
+        printf("\n[6] ROOT B-TREE DETALIAT:\n");
+        printf("  • Adresă: %p\n", (void*)root);
+        printf("  • is_leaf: %u\n", root->is_leaf);
+        printf("  • num_keys: %u (valid? %s)\n", root->num_keys, 
+              (root->num_keys <= ROW_MAX_KEYS) ? "Da" : "Nu");
+        printf("  • page_num: %lu\n", root->page_num);
+        
+        // Verificare posibile probleme
+        if (root->num_keys > ROW_MAX_KEYS) {
+            printf("  • EROARE CRITICĂ: num_keys (%u) > ROW_MAX_KEYS (%d)!\n", 
+                  root->num_keys, ROW_MAX_KEYS);
+        }
+        
+        // Verificare keys și raw_data
+        if (root->num_keys > 0 && root->num_keys <= ROW_MAX_KEYS) {
+            printf("\n[6.1] CHEI ȘI DATE:\n");
+            for (int i = 1; i <= root->num_keys && i <= 5; i++) {
+                printf("  • key[%d]: %lu, raw_data[%d]: %p\n", 
+                      i, root->keys[i], i, root->raw_data[i]);
+                
+                // Verifică validitatea pointer-ului raw_data
+                if (root->raw_data[i] && df && df->start_ptr) {
+                    uint64_t offset = (uint64_t)root->raw_data[i];
+                    void* row_ptr = (void*)(df->start_ptr + offset);
+                    
+                    // Verifică că offset-ul este în interiorul fișierului
+                    if (offset < df->size) {
+                        uint64_t row_size = 0;
+                        memcpy(&row_size, row_ptr, sizeof(uint64_t));
+                        printf("    - row_size: %lu bytes\n", row_size);
+                        
+                        // Verifică dacă dimensiunea rândului este rezonabilă
+                        if (row_size < 9 || row_size > 1024*1024) {
+                            printf("    - AVERTISMENT: Dimensiune rând suspectă!\n");
+                        }
+                    } else {
+                        printf("    - EROARE: Offset în afara limitelor fișierului!\n");
+                    }
+                }
+            }
+            
+            if (root->num_keys > 5) {
+                printf("  • [...și încă %u chei]\n", root->num_keys - 5);
+            }
+        }
+        
+        // Verificare pointeri copii
+        printf("\n[6.2] POINTERI COPII:\n");
+        int valid_children = 0;
+        for (int i = 0; i <= root->num_keys && i <= 5; i++) {
+            printf("  • plink[%d]: %p (NULL? %s)\n", i, (void*)root->plink[i], 
+                  root->plink[i] ? "Nu" : "Da");
+            
+            // Verifică pointeri suspecți
+            if (root->plink[i]) {
+                valid_children++;
+                if ((uintptr_t)root->plink[i] < 1000) {
+                    printf("    - AVERTISMENT: Valoare suspectă pentru pointer!\n");
+                }
+                
+                // Verifică link
+                printf("    - link[%d]: %lu\n", i, root->link[i]);
+                
+                // Verifică nodul copil dacă există
+                if (root->plink[i]->num_keys > ROW_MAX_KEYS) {
+                    printf("    - EROARE: Nodul copil are num_keys invalid (%u)!\n", 
+                          root->plink[i]->num_keys);
+                }
+            }
+        }
+        
+        if (root->num_keys + 1 > 5) {
+            printf("  • [...și încă %u pointeri]\n", root->num_keys + 1 - 5);
+        }
+        
+        printf("  • Total copii valizi: %d\n", valid_children);
+    }
+    
+    // 7. Verificare stare DataFile
+    if (df) {
+        printf("\n[7] DATAFILE STATUS DETALIAT:\n");
+        printf("  • Adresă: %p\n", (void*)df);
+        printf("  • fd: %d\n", df->fd);
+        printf("  • start_ptr: %p\n", df->start_ptr);
+        printf("  • size: %zu bytes (%.2f MB)\n", df->size, (float)df->size / (1024 * 1024));
+        printf("  • write_ptr: %lu (%.2f%% din fișier)\n", 
+              df->write_ptr, (float)df->write_ptr * 100 / (df->size ? df->size : 1));
+        printf("  • dirty: %s\n", df->dirty ? "Da (modificări nesalvate)" : "Nu (fișier sincronizat)");
+        
+        // Verificare header fișier (primii bytes)
+        if (df->start_ptr) {
+            printf("\n[7.1] HEADER FIȘIER (primii 16 bytes):\n  • ");
+            unsigned char* header = (unsigned char*)df->start_ptr;
+            for (int i = 0; i < 16 && i < df->size; i++) {
+                printf("%02x ", header[i]);
+                if (i == 7) printf(" | ");
+            }
+            printf("\n");
+        }
+    }
+    
+    // 8. Verificare stare memorie și structuri indexare
+    printf("\n[8] STARE MEMORIE ȘI STRUCTURI INDEXARE:\n");
+    
+    if (visited_count >= 0 && visited_count < MAX_VISITED_NODES) {
+        printf("  • visited_nodes: %d noduri înregistrate\n", visited_count);
+        
+        // Verifică primele câteva noduri vizitate
+        for (int i = 0; i < visited_count && i < 3; i++) {
+            printf("    - visited_nodes[%d]: page_num=%lu, node=%p\n", 
+                  i, visited_nodes[i].page_num, (void*)visited_nodes[i].node);
+        }
+        
+        if (visited_count > 3) {
+            printf("    - [...și încă %d noduri vizitate]\n", visited_count - 3);
+        }
+    } else if (visited_count >= MAX_VISITED_NODES) {
+        printf("  • AVERTISMENT: visited_count (%d) >= MAX_VISITED_NODES (%d)!\n", 
+              visited_count, MAX_VISITED_NODES);
+    }
+    
+    if (serialized_count >= 0 && serialized_count < MAX_VISITED_NODES) {
+        printf("  • serialized_pages: %d pagini serializate\n", serialized_count);
+        
+        // Verifică primele câteva pagini serializate
+        for (int i = 0; i < serialized_count && i < 3; i++) {
+            printf("    - serialized_pages[%d]: %lu\n", i, serialized_pages[i]);
+        }
+        
+        if (serialized_count > 3) {
+            printf("    - [...și încă %d pagini serializate]\n", serialized_count - 3);
+        }
+    } else if (serialized_count >= MAX_VISITED_NODES) {
+        printf("  • AVERTISMENT: serialized_count (%d) >= MAX_VISITED_NODES (%d)!\n", 
+              serialized_count, MAX_VISITED_NODES);
+    }
+    
+    // Verifică heap și stack
+    void* stack_var = &checkpoint;
+    void* heap_var = malloc(1);
+    printf("  • Adresă stack: %p\n", (void*)stack_var);
+    printf("  • Adresă heap: %p\n", heap_var);
+    free(heap_var);
+    
+    printf("\n============ END DIAGNOSTIC ============\n");
+}
 
 void process_statement(Statement *stmt) {
 
@@ -421,7 +801,16 @@ void process_statement(Statement *stmt) {
                         column_pointers[i] = metadata->column_names[i];
                     }
 
+                    // Înainte de display_table
+                    diagnose_display_table("ÎNAINTE DE AFIȘARE", column_pointers, metadata->num_columns, metadata, stmt);
+
+                    // Apelul funcției originale
                     display_table(column_pointers, metadata->num_columns, metadata, stmt);
+
+                    // Imediat după display_table
+                    diagnose_display_table("DUPĂ AFIȘARE", column_pointers, metadata->num_columns, metadata, stmt);
+
+                    printf("se intoarce aici\n");
                 } else {
                     display_table(stmt->selectStmt.columns, stmt->selectStmt.num_columns, metadata, stmt);
                 }
@@ -662,16 +1051,40 @@ void free_statement(Statement *stmt) {
             break;
             
         case STATEMENT_SELECT:
-            if (stmt->selectStmt.columns) {
-                for (int i = 0; i < stmt->selectStmt.num_columns; i++) {
+            if (stmt->selectStmt.columns != NULL) {
+                for (int i = 0; i < stmt->selectStmt.num_columns && stmt->selectStmt.columns[i] != NULL; i++) {
                     free(stmt->selectStmt.columns[i]);
+                    stmt->selectStmt.columns[i] = NULL; // Prevenire double-free
                 }
                 free(stmt->selectStmt.columns);
+                stmt->selectStmt.columns = NULL;
             }
-            free(stmt->selectStmt.table);
-            if (stmt->selectStmt.condition) {
+            
+            if (stmt->selectStmt.table != NULL) {
+                free(stmt->selectStmt.table);
+                stmt->selectStmt.table = NULL;
+            }
+            
+            if (stmt->selectStmt.condition != NULL) {
                 free(stmt->selectStmt.condition);
+                stmt->selectStmt.condition = NULL;
             }
+            
+            if (stmt->selectStmt.cond_column != NULL) {
+                // Verificare pentru număr valid de coloane condiționale
+                if (stmt->selectStmt.num_cond_columns > 0) {
+                    for (int i = 0; i < stmt->selectStmt.num_cond_columns && 
+                        stmt->selectStmt.cond_column[i] != NULL; i++) {
+                        free(stmt->selectStmt.cond_column[i]);
+                        stmt->selectStmt.cond_column[i] = NULL; // Prevenire double-free
+                    }
+                }
+                free(stmt->selectStmt.cond_column);
+                stmt->selectStmt.cond_column = NULL;
+            }
+            
+            stmt->selectStmt.num_columns = 0;
+            stmt->selectStmt.num_cond_columns = 0;
             break;
             
         case STATEMENT_CREATE:

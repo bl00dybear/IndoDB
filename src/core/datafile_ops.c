@@ -558,7 +558,7 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
     if (node->plink != NULL) {
         for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i+=1) {
             if (node->plink[i] != NULL) {
-                if ((uintptr_t)node->plink[i] < 1000 || 
+                if ((uintptr_t)node->plink[i] < MAX_VISITED_NODES || 
                     (uintptr_t)node->plink[i] > (uintptr_t)df->start_ptr + df->size) {
                     continue;
                 }
@@ -573,19 +573,6 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
     }
 }
 
-// void send_column_values_to_ast(int* pipe_to_ast, int* column_indexes, int num_columns, MetadataPage *metadata, Statement *stmt) {
-//     for (int i = 0; i < num_columns; i+=1) {
-//         uint32_t col_index = column_indexes[i];
-//         if (col_index >= metadata->num_columns) {
-//             fprintf(stderr, "Error: Column index %d out of bounds\n", col_index);
-//             continue;
-//         }
-        
-//         char* column_name = metadata->column_names[col_index];
-//         write(pipe_to_ast[1], column_name, strlen(column_name));
-//         write(pipe_to_ast[1], "\n", 1);
-//     }
-// }
 
 void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pipe_from_ast,
                                        char **cond_columns, MetadataPage *metadata,
@@ -595,7 +582,7 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
     }
     
     // Detectarea ciclurilor cu vizitare de noduri
-    static void* visited_nodes[1000] = {0};
+    static void* visited_nodes[MAX_VISITED_NODES] = {0};
     static int visited_count = 0;
     
     for (int v = 0; v < visited_count; v++) {
@@ -603,8 +590,8 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
             return;
         }
     }
-    
-    if (visited_count < 1000) {
+
+    if (visited_count < MAX_VISITED_NODES) {
         visited_nodes[visited_count++] = node;
     } else {
         visited_count = 0;
@@ -763,9 +750,9 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
         
         condition_data[condition_data_len] = '\0';
         
-        printf("Condition data: %s\n", condition_data);
+        // printf("Condition data: %s\n", condition_data);
 
-        printf("\n");
+        // printf("\n");
 
         // Send data to child process for evaluation
         if (write(pipe_to_ast, condition_data, condition_data_len) == -1) {
@@ -773,8 +760,8 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
             goto cleanup_row;
         }
         
-        fprintf(stderr, "Data sent to child [%d bytes]: %s\n", condition_data_len, condition_data);
-        fflush(stderr);  // Opțional pentru stderr
+        // fprintf(stderr, "Data sent to child [%d bytes]: %s\n", condition_data_len, condition_data);
+        // fflush(stderr);  // Opțional pentru stderr
 
         // Read response from child process
         char response[10] = {0};
@@ -795,7 +782,6 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
         }
         
     cleanup_row:
-        // Free allocated memory
         for (uint64_t col = 0; col < metadata->num_columns; col++) {
             if (values[col].type == TYPE_VARCHAR && values[col].str_value != NULL) {
                 free(values[col].str_value);
@@ -808,11 +794,10 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
         }
     }
     
-    // Recursively process child nodes
     if (node->plink != NULL) {
         for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
             if (node->plink[i] != NULL) {
-                if ((uintptr_t)node->plink[i] < 1000 || 
+                if ((uintptr_t)node->plink[i] < MAX_VISITED_NODES || 
                     (uintptr_t)node->plink[i] > (uintptr_t)df->start_ptr + df->size) {
                     continue;
                 }
@@ -901,20 +886,20 @@ void display_table(char **columns, int num_columns, MetadataPage *meta, Statemen
     
     RowNode *node = root;
 
-    // if (stmt->selectStmt.cond_column == NULL) {
+    if (stmt->selectStmt.cond_column == NULL) {
         display_all_rows(node, meta, column_indexes, num_columns);
         printf("\n");
 
+        printf("DEBUG: Before freeing column_indexes\n");
         free(column_indexes);
-
-
-        printf("se intoarce din dispaly");
-    // }
-    // else {
-    //     display_rows_where_clause(stmt->selectStmt.cond_column,node, meta, stmt, column_indexes, num_columns, stmt->selectStmt.num_cond_columns);
-    //     printf("\n");
-    //     free(column_indexes);
-    // }
+        printf("DEBUG: After freeing column_indexes\n");
+        printf("se intoarce din display\n");
+    }
+    else {
+        display_rows_where_clause(stmt->selectStmt.cond_column,node, meta, stmt, column_indexes, num_columns, stmt->selectStmt.num_cond_columns);
+        printf("\n");
+        free(column_indexes);
+    }
 }
 
 
