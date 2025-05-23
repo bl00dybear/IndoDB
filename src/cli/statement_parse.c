@@ -141,7 +141,7 @@ int parse_statement(const char *filename, Statement *stmt) {
         if (cJSON_IsNull(condition)) {
             stmt->selectStmt.cond_column = NULL;
         } else {
-            int capacity = 100;
+            int capacity = 10000000;
             int count = 0;
             char **cond_columns = malloc(capacity * sizeof(char*));
 

@@ -441,22 +441,13 @@ void diagnose_display_table(const char* checkpoint, char** columns, int num_colu
                 printf("\n[4.2] CONDIȚIE ȘI COLOANE ÎN CONDIȚIE:\n");
 
                 // Verifică adresa condiției fără a o dereferenția
-                printf("  • condition address: %p\n", (void*)&(stmt->selectStmt.condition));
+                // printf("  • condition address: %p\n", (void*)&(stmt->selectStmt.condition));
 
                 // Folosește accesare sigură
-                if (&(stmt->selectStmt.condition) != NULL) {
-                    if (stmt->selectStmt.condition != NULL) {
-                        // Verifică dacă adresa este validă înainte de a încerca să citească conținutul
-                        if ((uintptr_t)stmt->selectStmt.condition > 1000) {
-                            printf("  • condition: %s\n", stmt->selectStmt.condition);
-                        } else {
-                            printf("  • condition: <POINTER INVALID: %p>\n", (void*)stmt->selectStmt.condition);
-                        }
-                    } else {
-                        printf("  • condition: NULL\n");
-                    }
+                if (stmt->selectStmt.condition == NULL) {
+                    printf("Condition este mereu NULL pentru ca exista functia collect_columns_from_condition\n");
                 } else {
-                    printf("  • condition: <CAMP INACCESIBIL>\n");
+                    printf("  • condition: n-are cum sa ajunge aici\n");
                 }
                 
                 if (stmt->selectStmt.cond_column) {
