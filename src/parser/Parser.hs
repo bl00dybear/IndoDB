@@ -54,9 +54,10 @@ parseUpdate = lexeme $ do
     void $ lexeme (stringCI "update")
     table <- identifier
     void $ lexeme (stringCI "set")
-    updates <- sepBy parseAssignment (lexeme (char ','))
+    assignments <- sepBy parseAssignment (lexeme (char ','))
+    let (cols, vals) = unzip assignments
     cond <- optionMaybe parseWhere
-    return $ UpdateStmt table updates cond
+    return $ UpdateStmt table cols vals cond
 
 parseDelete :: Parser SQLStatement
 parseDelete = lexeme $ do

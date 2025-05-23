@@ -44,7 +44,13 @@ parseString = lexeme $ do
     return $ SQLString str
 
 parseInt :: Parser SQLValue
-parseInt = lexeme (SQLInt . read <$> many1 digit)
+parseInt = lexeme $ do
+    sign <- optionMaybe (char '-')
+    digits <- many1 digit
+    let number = read digits
+    return $ SQLInt $ case sign of
+        Just _  -> -number
+        Nothing -> number
 
 parseFloat :: Parser SQLValue
 parseFloat = lexeme $ do
@@ -101,12 +107,12 @@ parseColumn = lexeme $ do
     colConstraint <- optionMaybe parseConstraint
     return (colName, colType, colConstraint)
 
-parseAssignment :: Parser (String, String)
+parseAssignment :: Parser (String, SQLValue)
 parseAssignment = lexeme $ do
     colName <- identifier
     void $ lexeme (char '=')
     value <- parseValue
-    return (colName, show value)
+    return (colName, value)
 
 parseCondition :: Parser Condition
 parseCondition = lexeme parseOrCondition

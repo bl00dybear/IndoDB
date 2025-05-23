@@ -1091,6 +1091,58 @@ void free_statement(Statement *stmt) {
         case STATEMENT_DROP:
             free(stmt->dropStmt.table);
             break;
+
+        case STATEMENT_UPDATE:
+            if (stmt->updateStmt.set_columns) {
+                for (int i = 0; i < stmt->updateStmt.num_set_columns; i++) {
+                    free(stmt->updateStmt.set_columns[i]);
+                }
+                free(stmt->updateStmt.set_columns);
+            }
+
+            if (stmt->updateStmt.set_values) {
+                for (int i = 0; i < stmt->updateStmt.num_set_values; i++) {
+                    free(stmt->updateStmt.set_values[i]);
+                }
+                free(stmt->updateStmt.set_values);
+            }
+
+            if (stmt->updateStmt.table) {
+                free(stmt->updateStmt.table);
+            }
+
+            if (stmt->updateStmt.condition) {
+                free(stmt->updateStmt.condition);  // JSON string
+            }
+
+            if (stmt->updateStmt.cond_column) {
+                for (int i = 0; i < stmt->updateStmt.num_cond_columns; i++) {
+                    free(stmt->updateStmt.cond_column[i]);
+                }
+                free(stmt->updateStmt.cond_column);
+            }
+
+            stmt->updateStmt.num_set_columns = 0;
+            stmt->updateStmt.num_set_values = 0;
+            stmt->updateStmt.num_cond_columns = 0;
+            break;
+
+        case STATEMENT_DELETE:
+            if (stmt->deleteStmt.table) free(stmt->deleteStmt.table);
+
+            if (stmt->deleteStmt.condition) {
+                cJSON_Delete(stmt->deleteStmt.condition);
+            }
+
+            if (stmt->deleteStmt.cond_column) {
+                for (int i = 0; i < stmt->deleteStmt.num_cond_columns; i++) {
+                    free(stmt->deleteStmt.cond_column[i]);
+                }
+                free(stmt->deleteStmt.cond_column);
+            }
+
+            stmt->deleteStmt.num_cond_columns = 0;
+            break;
             
         case STATEMENT_CREATE_DB:
             free(stmt->createDbStmt.database);

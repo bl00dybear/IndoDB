@@ -52,7 +52,7 @@ data SQLStatement
     | InsertStmt String (Maybe [String]) [SQLValue]
     | DropStmt String
     | SelectStmt [String] String (Maybe Condition)
-    | UpdateStmt String [(String, String)] (Maybe Condition)
+    | UpdateStmt String [String] [SQLValue] (Maybe Condition)
     | DeleteStmt String (Maybe Condition)
     | CreateDbStmt String
     | DropDbStmt String
@@ -84,10 +84,11 @@ instance ToJSON SQLStatement where
         , "columns" .= cols
         , "condition" .= cond
         ]
-    toJSON (UpdateStmt table updates cond) = object
+    toJSON (UpdateStmt table cols vals cond) = object
         [ "statement" .= ("UpdateStmt" :: String)
         , "table" .= table
-        , "updates" .= map (\(col, val) -> object ["column" .= col, "value" .= val]) updates
+        , "columns" .= cols
+        , "values" .= vals
         , "condition" .= cond
         ]
     toJSON (DeleteStmt table cond) = object

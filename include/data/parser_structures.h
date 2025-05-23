@@ -8,6 +8,8 @@ typedef enum {
     STATEMENT_SELECT,
     STATEMENT_CREATE,
     STATEMENT_DROP,
+    STATEMENT_UPDATE,
+    STATEMENT_DELETE,
     STATEMENT_CREATE_DB,
     STATEMENT_DROP_DB,
     STATEMENT_USE_DB,
@@ -60,6 +62,24 @@ typedef struct {
 } DropStmtStruct;
 
 typedef struct {
+    char **set_columns;
+    int num_set_columns;
+    char **set_values;
+    int num_set_values;
+    char *table;
+    char *condition;
+    char **cond_column;
+    int num_cond_columns;
+} UpdateStmtStruct;
+
+typedef struct {
+    char *table;
+    char *condition;
+    char **cond_column;
+    int num_cond_columns;
+} DeleteStmtStruct;
+
+typedef struct {
     char *database;
 } CreateDbStmtStruct;
 
@@ -88,6 +108,8 @@ typedef struct {
         SelectStmtStruct selectStmt;
         CreateStmtStruct createStmt;
         DropStmtStruct dropStmt;
+        UpdateStmtStruct updateStmt;
+        DeleteStmtStruct deleteStmt;
         CreateDbStmtStruct createDbStmt;
         DropDbStmtStruct dropDbStmt;
         UseDbStmtStruct useDbStmt;

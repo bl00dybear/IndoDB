@@ -222,6 +222,78 @@ int parse_statement(const char *filename, Statement *stmt) {
 
         cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
         stmt->dropStmt.table = strdup(table->valuestring);
+    } else if (strcmp(statement_type->valuestring, "UpdateStmt") == 0) {
+        stmt->type = STATEMENT_UPDATE;
+
+        cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
+        cJSON *columns = cJSON_GetObjectItemCaseSensitive(json, "columns");
+        cJSON *values = cJSON_GetObjectItemCaseSensitive(json, "values");
+        cJSON *condition = cJSON_GetObjectItemCaseSensitive(json, "condition");
+
+        int num_columns = cJSON_GetArraySize(columns);
+        int num_values = cJSON_GetArraySize(values);
+
+        stmt->updateStmt.num_set_columns = num_columns;
+        stmt->updateStmt.num_set_values = num_values;
+
+        stmt->updateStmt.set_columns = malloc(num_columns * sizeof(char *));
+        for (int i = 0; i < num_columns; i++) {
+            stmt->updateStmt.set_columns[i] = strdup(cJSON_GetArrayItem(columns, i)->valuestring);
+        }
+
+        stmt->updateStmt.set_values = malloc(num_values * sizeof(char *));
+        for (int i = 0; i < num_values; i++) {
+            cJSON *val_obj = cJSON_GetArrayItem(values, i);
+            cJSON *val = cJSON_GetObjectItemCaseSensitive(val_obj, "value");
+
+            if (cJSON_IsString(val)) {
+                stmt->updateStmt.set_values[i] = strdup(val->valuestring);
+            } else if (cJSON_IsNumber(val)) {
+                char buffer[32];
+                snprintf(buffer, sizeof(buffer), "%g", val->valuedouble);
+                stmt->updateStmt.set_values[i] = strdup(buffer);
+            } else {
+                printf("Unsupported value type in UpdateStmt!\n");
+                exit(1);
+            }
+        }
+
+        stmt->updateStmt.table = strdup(table->valuestring);
+
+        if (cJSON_IsNull(condition)) {
+            stmt->updateStmt.condition = NULL;
+            stmt->updateStmt.cond_column = NULL;
+            stmt->updateStmt.num_cond_columns = 0;
+        } else {
+            stmt->updateStmt.condition = cJSON_PrintUnformatted(condition);  // JSON as string
+
+            int capacity = 10, count = 0;
+            char **cond_columns = malloc(capacity * sizeof(char *));
+            collect_columns_from_condition(condition, &cond_columns, &count, &capacity);
+
+            stmt->updateStmt.cond_column = cond_columns;
+            stmt->updateStmt.num_cond_columns = count;
+        }
+    } else if (strcmp(statement_type->valuestring, "DeleteStmt") == 0) {
+        stmt->type = STATEMENT_DELETE;
+
+        cJSON *table = cJSON_GetObjectItemCaseSensitive(json, "table");
+        cJSON *condition = cJSON_GetObjectItemCaseSensitive(json, "condition");
+
+        stmt->deleteStmt.table = strdup(table->valuestring);
+
+        if (cJSON_IsNull(condition)) {
+            stmt->deleteStmt.condition = NULL;
+            stmt->deleteStmt.cond_column = NULL;
+            stmt->deleteStmt.num_cond_columns = 0;
+        } else {
+            stmt->deleteStmt.condition = cJSON_Duplicate(condition, 1);
+            int count = 0, capacity = 10;
+            char **cond_columns = malloc(capacity * sizeof(char *));
+            collect_columns_from_condition(condition, &cond_columns, &count, &capacity);
+            stmt->deleteStmt.cond_column = cond_columns;
+            stmt->deleteStmt.num_cond_columns = count;
+        }
     } else if (strcmp(statement_type->valuestring, "CreateDbStmt") == 0) {
         stmt->type = STATEMENT_CREATE_DB;
         
