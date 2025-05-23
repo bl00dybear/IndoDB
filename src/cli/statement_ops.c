@@ -441,7 +441,6 @@ void diagnose_display_table(const char* checkpoint, char** columns, int num_colu
                 printf("\n[4.2] CONDIȚIE ȘI COLOANE ÎN CONDIȚIE:\n");
 
                 // Verifică adresa condiției fără a o dereferenția
-                // printf("  • condition address: %p\n", (void*)&(stmt->selectStmt.condition));
 
                 // Folosește accesare sigură
                 if (stmt->selectStmt.condition == NULL) {
@@ -793,15 +792,15 @@ void process_statement(Statement *stmt) {
                     }
 
                     // Înainte de display_table
-                    diagnose_display_table("ÎNAINTE DE AFIȘARE", column_pointers, metadata->num_columns, metadata, stmt);
+                    // diagnose_display_table("ÎNAINTE DE AFIȘARE", column_pointers, metadata->num_columns, metadata, stmt);
 
                     // Apelul funcției originale
                     display_table(column_pointers, metadata->num_columns, metadata, stmt);
 
                     // Imediat după display_table
-                    diagnose_display_table("DUPĂ AFIȘARE", column_pointers, metadata->num_columns, metadata, stmt);
+                    // diagnose_display_table("DUPĂ AFIȘARE", column_pointers, metadata->num_columns, metadata, stmt);
 
-                    printf("se intoarce aici\n");
+                    // printf("se intoarce aici\n");
                 } else {
                     display_table(stmt->selectStmt.columns, stmt->selectStmt.num_columns, metadata, stmt);
                 }
@@ -1056,10 +1055,8 @@ void free_statement(Statement *stmt) {
                 stmt->selectStmt.table = NULL;
             }
             
-            if (stmt->selectStmt.condition != NULL) {
-                free(stmt->selectStmt.condition);
-                stmt->selectStmt.condition = NULL;
-            }
+            free(stmt->selectStmt.condition);
+            stmt->selectStmt.condition = NULL;
             
             if (stmt->selectStmt.cond_column != NULL) {
                 // Verificare pentru număr valid de coloane condiționale
