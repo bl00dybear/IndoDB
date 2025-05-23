@@ -140,7 +140,9 @@ int parse_statement(const char *filename, Statement *stmt) {
 
         if (cJSON_IsNull(condition)) {
             stmt->selectStmt.cond_column = NULL;
+            stmt->selectStmt.condition = NULL;
         } else {
+            stmt->selectStmt.condition = cJSON_Duplicate(condition, 1);
             int capacity = 10000000;
             int count = 0;
             char **cond_columns = malloc(capacity * sizeof(char*));

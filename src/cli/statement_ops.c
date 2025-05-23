@@ -1055,8 +1055,10 @@ void free_statement(Statement *stmt) {
                 stmt->selectStmt.table = NULL;
             }
             
-            free(stmt->selectStmt.condition);
-            stmt->selectStmt.condition = NULL;
+            if (stmt->selectStmt.condition != NULL) {
+                cJSON_Delete(stmt->selectStmt.condition);
+                stmt->selectStmt.condition = NULL;
+            }
             
             if (stmt->selectStmt.cond_column != NULL) {
                 // Verificare pentru număr valid de coloane condiționale
