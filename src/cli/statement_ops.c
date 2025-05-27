@@ -791,16 +791,8 @@ void process_statement(Statement *stmt) {
                         column_pointers[i] = metadata->column_names[i];
                     }
 
-                    // Înainte de display_table
-                    // diagnose_display_table("ÎNAINTE DE AFIȘARE", column_pointers, metadata->num_columns, metadata, stmt);
-
-                    // Apelul funcției originale
                     display_table(column_pointers, metadata->num_columns, metadata, stmt);
 
-                    // Imediat după display_table
-                    // diagnose_display_table("DUPĂ AFIȘARE", column_pointers, metadata->num_columns, metadata, stmt);
-
-                    // printf("se intoarce aici\n");
                 } else {
                     display_table(stmt->selectStmt.columns, stmt->selectStmt.num_columns, metadata, stmt);
                 }
@@ -836,6 +828,61 @@ void process_statement(Statement *stmt) {
             commit_changes_db(db, metadata);
                       
 
+            break;
+        }
+        case STATEMENT_DELETE:{
+
+            if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
+                printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
+                break;
+            }
+            db=NULL;
+            df=NULL;
+            metadata=NULL;
+            free_page_queue=NULL;
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, "/btree");
+            strcat(dbfilepath, stmt->deleteStmt.table); 
+            strcat(dbfilepath, ".bin");
+            // printf("%s\n\n", dbfilepath);
+
+            char datafilepath[256] = {0};
+            strcpy(datafilepath, DATA_FILENAME);
+            strcat(datafilepath, "/data");
+            strcat(datafilepath, stmt->deleteStmt.table);
+            strcat(datafilepath, ".bin");
+
+            if(!(~access(dbfilepath, F_OK)))
+            {   
+                perror("Error: Database file not found"); 
+                break;
+            }
+            
+            if(!(~access(datafilepath, F_OK)))
+            {
+                perror("Error: Data file not found");
+                break;
+            }
+            database_init(stmt->deleteStmt.table);
+
+            if(!strcmp(metadata->table_name,stmt->deleteStmt.table)) {
+                if (stmt->deleteStmt.condition == NULL) {
+                    printf("Error: No condition specified for DELETE statement.\n");
+                    break;
+                }
+
+                if (stmt->deleteStmt.num_cond_columns == 0) {
+                    printf("Error: No columns specified in the condition.\n");
+                    break;
+                }
+
+                printf("asdas\n\n");
+                delete_rows(stmt, metadata,metadata->num_columns);
+
+                printf("Deleting rows from table '%s' where condition is met...\n", stmt->deleteStmt.table);
+            }
+            
             break;
         }
         case STATEMENT_DROP: {
@@ -946,13 +993,11 @@ void process_statement(Statement *stmt) {
                 strcpy(DB_FILENAME, "../databases");
             }
 
-            // Verifică dacă directorul există
             if(access(dbfilepath, F_OK) != 0) {
                 printf("Error: Database '%s' does not exist.\n", stmt->dropDbStmt.database);
                 break;
             }
             
-            // Șterge directorul și conținutul său recursiv
             char rm_command[512];
             snprintf(rm_command, sizeof(rm_command), "rm -rf \"%s\"", dbfilepath);
             
