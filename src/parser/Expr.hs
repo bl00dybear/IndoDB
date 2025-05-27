@@ -34,13 +34,20 @@ instance FromJSON Condition where
 
 -- Reprezintă întregul query
 data Query = Query
-  { columns :: [String]
+  { columns   :: Maybe [String]
   , condition :: Condition
   , statement :: String
-  , table :: String
+  , table     :: String
+  , values    :: Maybe [Value]
   } deriving (Show, Generic)
 
-instance FromJSON Query
+instance FromJSON Query where
+  parseJSON = withObject "Query" $ \v -> 
+    Query <$> v .:? "columns"
+          <*> v .:  "condition"
+          <*> v .:  "statement"
+          <*> v .:  "table"
+          <*> v .:? "values"
 
 -- Evaluează expresia condițională
 evalCondition :: Condition -> Map.Map String Int -> Bool
