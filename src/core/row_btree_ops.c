@@ -13,6 +13,7 @@ RowNode *create_node(const uint64_t key,void *data, RowNode *child) {
     
     // Initialize the node
     memset(newNode, 0, sizeof(struct RowNode));
+    newNode->is_leaf = 1; 
     newNode->keys[1] = key;
     newNode->raw_data[1] = data;
     newNode->num_keys = 1;
@@ -689,6 +690,9 @@ void shift_left(struct RowNode *node, const int pos) {
         node->keys[i] = node->keys[i + 1];
         node->plink[i] = node->plink[i + 1];
         node->link[i] = node->link[i + 1];
+        node->raw_data[i] = node->raw_data[i + 1];
+
+
     }
     
     node->plink[node->num_keys] = node->plink[node->num_keys + 1];
@@ -714,6 +718,7 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
             current->keys[i+1] = current->keys[i];
             current->plink[i+1] = current->plink[i];
             current->link[i+1] = current->link[i];
+            current->raw_data[i+1] = current->raw_data[i];
         }
         current->plink[1] = current->plink[0];
         current->link[1] = current->link[0];
@@ -757,6 +762,7 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
             right_sibling->keys[i] = right_sibling->keys[i+1];
             right_sibling->plink[i-1] = right_sibling->plink[i];
             right_sibling->link[i-1] = right_sibling->link[i];
+            right_sibling->raw_data[i-1] = right_sibling->raw_data[i];
         }
         right_sibling->plink[right_sibling->num_keys-1] = right_sibling->plink[right_sibling->num_keys];
         right_sibling->link[right_sibling->num_keys-1] = right_sibling->link[right_sibling->num_keys];
@@ -780,9 +786,11 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
             left_sibling->keys[left_sibling->num_keys+i+1] = current->keys[i];
             left_sibling->plink[left_sibling->num_keys+i] = current->plink[i-1];
             left_sibling->link[left_sibling->num_keys+i] = current->link[i-1];
+            left_sibling->raw_data[left_sibling->num_keys+i] = current->raw_data[i-1];
         }
         left_sibling->plink[left_sibling->num_keys+current->num_keys+1] = current->plink[current->num_keys];
         left_sibling->link[left_sibling->num_keys+current->num_keys+1] = current->link[current->num_keys];
+
         
         // Update key count
         left_sibling->num_keys += current->num_keys + 1;
@@ -805,6 +813,7 @@ void handle_underfull_node(struct RowNode *parent, int idx) {
             current->keys[current->num_keys+i+1] = right_sibling->keys[i];
             current->plink[current->num_keys+i] = right_sibling->plink[i-1];
             current->link[current->num_keys+i] = right_sibling->link[i-1];
+            current->raw_data[current->num_keys+i] = right_sibling->raw_data[i-1];
         }
         current->plink[current->num_keys+right_sibling->num_keys+1] = right_sibling->plink[right_sibling->num_keys];
         current->link[current->num_keys+right_sibling->num_keys+1] = right_sibling->link[right_sibling->num_keys];
@@ -835,6 +844,7 @@ void delete_value(struct RowNode *node, const uint64_t key) {
     // If value is found in this node
     if (pos <= node->num_keys && key == node->keys[pos]) {
         // Case 1: If a node is a leaf, remove the value
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if (node->is_leaf) {
             shift_left(node, pos);
             if (node == root && node->num_keys == 0) {
@@ -844,7 +854,7 @@ void delete_value(struct RowNode *node, const uint64_t key) {
                 root = NULL;
                 return;
             }
-            printf("Value %lu deleted from the tree\n", key);
+            printf("Value %lu deleted from the treee\n", key);
             return;
         } 
         // Case 2: If a node is an internal node
@@ -892,15 +902,16 @@ void delete_value(struct RowNode *node, const uint64_t key) {
 }
 
 // Function to delete a value from the B-tree
-void delete_value_from_tree(const int val) {
+void delete_value_from_tree(const uint64_t val) {
     if (root == NULL) {
         printf("Tree is empty\n");
         return;
     }
-
+    printf("se apeleaza\n\n");
     delete_value(root, val);
-
+    printf("Value %d deleted from the tree\n", val);
     // If the root has only one child left, make that child the new root
+    if(root!=NULL)
     if (root->num_keys == 0 && !root->is_leaf) {
         RowNode *temp = root;
         root = root->plink[0];
@@ -918,7 +929,7 @@ void insert(const uint64_t key, void* data) {
     // If the root was split, or it's the first insertion, create a new root
     if (flag) {
         RowNode *new_root = create_node(i,data, child);
-        new_root->is_leaf = 0;  // New root with children is not a leaf
+        new_root->is_leaf = 1;  // New root with children is not a leaf
         root = new_root;
     }
 

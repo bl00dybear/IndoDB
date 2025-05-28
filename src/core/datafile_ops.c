@@ -265,7 +265,7 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
 }
 
 
-void print_row_content(void* row_content, MetadataPage *metadata, int* column_indexes, int num_columns) {
+bool print_row_content(void* row_content, MetadataPage *metadata, int* column_indexes, int num_columns) {
     // Verificare pentru pointeri NULL
     if (!row_content || !metadata || !column_indexes || num_columns <= 0) {
         fprintf(stderr, "Error: Invalid parameters passed to print_row_content\n");
@@ -284,6 +284,11 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
 
     bool flag;
     memcpy(&flag, row_content + 8, sizeof(bool));
+
+    if (flag == 0){
+        return 0 ;
+    }
+    printf("|");
 
     // Alocă memoria cu verificare
     void* row_content_mem = malloc(row_size-9);
@@ -441,6 +446,9 @@ void print_row_content(void* row_content, MetadataPage *metadata, int* column_in
             }
         }
     }
+            printf("\n");
+        
+        print_separator(num_columns);
     
 cleanup:
     // Eliberăm memoria alocată pentru string-uri
@@ -455,6 +463,8 @@ cleanup:
     if (row_content_mem) {
         free(row_content_mem);
     }
+
+    return true;
 }
 
 void print_separator(int num_columns) {
@@ -531,7 +541,9 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
         visited_nodes[visited_count++] = node;
     }
 
-    for (int i = 1; i <= node->num_keys && i < ROW_MAX_KEYS; i+=1) {
+    int num_rows = node->num_keys;
+
+    for (int i = 1; i <= num_rows && i < ROW_MAX_KEYS; i+=1) {
         uint64_t offset = (uint64_t)node->raw_data[i];
         
         if (offset == 0 || offset >= df->size) {
@@ -548,11 +560,11 @@ void display_all_rows(RowNode *node, MetadataPage *metadata, int* column_indexes
             continue;
         }
 
-        printf("|");
-        print_row_content(row_content, metadata, column_indexes, num_columns);
-        printf("\n");
         
-        print_separator(num_columns);
+        bool printed = print_row_content(row_content, metadata, column_indexes, num_columns);
+
+        if(!printed) num_rows+=1;
+
     }
 
     if (node->plink != NULL) {
@@ -776,7 +788,7 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
         }
         
         // Check if condition was true
-        if (strncmp(response, "True", 4) == 0) {
+        if (strncmp(response, "True", 4) == 0 && flag) {
             // Display this row
             printf("|");
             print_row_content(row_content, metadata, column_indexes, num_columns);
@@ -1235,7 +1247,15 @@ void recursive_delete_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         if (strncmp(response, "True", 4) == 0) {
             bool flag=false;
             memcpy(row_content + 8,&flag, sizeof(bool));
-
+            memcpy(df->start_ptr + offset + 8, &flag, sizeof(bool));
+            printf("%ld\n",node->keys[i]);
+            delete_value_from_tree(node->keys[i]);
+            i--;
+            printf("A mers\n\n");
+            if (msync(df->start_ptr, df->size, MS_SYNC) != 0) {
+                perror("Error syncing memory to file");
+                return false;
+            }
         }
         
     cleanup_row:

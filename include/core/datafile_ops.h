@@ -3,6 +3,7 @@
 
 #include "../data/core_structures.h"
 #include "../data/parser_structures.h"
+#include "../core/row_btree_ops.h"
 
 uint64_t write_row(DataFile* df, const void *row, size_t row_size);
 void commit_changes_df(DataFile* df);

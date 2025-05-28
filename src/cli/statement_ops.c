@@ -882,6 +882,11 @@ void process_statement(Statement *stmt) {
 
                 printf("Deleting rows from table '%s' where condition is met...\n", stmt->deleteStmt.table);
             }
+            serialize_metadata(db, metadata);
+            set_file_dirty_db(db, true);
+            set_file_dirty_df(df,true);
+            commit_changes_db(db, metadata);
+            commit_changes_df(df);
             
             break;
         }

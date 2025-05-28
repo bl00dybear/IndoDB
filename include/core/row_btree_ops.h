@@ -91,7 +91,7 @@ void shift_left(struct RowNode *node, const int pos);
 int can_spare_key(const struct RowNode *node);
 void handle_underfull_node(struct RowNode *parent, int idx);
 void delete_value(struct RowNode *node, const uint64_t key);
-void delete_value_from_tree(const int val);
+void delete_value_from_tree(const uint64_t val);
 void insert(const uint64_t key, void* data);
 void serialize_metadata(DBFile* db, MetadataPage* metadata);
 void deserialize_metadata(DBFile* db, MetadataPage* metadata);
