@@ -877,7 +877,6 @@ void process_statement(Statement *stmt) {
                     break;
                 }
 
-                printf("asdas\n\n");
                 delete_rows(stmt, metadata,metadata->num_columns);
 
                 printf("Deleting rows from table '%s' where condition is met...\n", stmt->deleteStmt.table);
@@ -889,6 +888,68 @@ void process_statement(Statement *stmt) {
             commit_changes_df(df);
             
             break;
+        }
+        case STATEMENT_UPDATE:{
+            
+            if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
+                printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
+                break;
+            }
+            db=NULL;
+            df=NULL;
+            metadata=NULL;
+            free_page_queue=NULL;
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, "/btree");
+            strcat(dbfilepath, stmt->updateStmt.table); 
+            strcat(dbfilepath, ".bin");
+            // printf("%s\n\n", dbfilepath);
+
+            char datafilepath[256] = {0};
+            strcpy(datafilepath, DATA_FILENAME);
+            strcat(datafilepath, "/data");
+            strcat(datafilepath, stmt->updateStmt.table);
+            strcat(datafilepath, ".bin");
+
+            if(!(~access(dbfilepath, F_OK)))
+            {   
+                perror("Error: Database file not found"); 
+                break;
+            }
+            
+            if(!(~access(datafilepath, F_OK)))
+            {
+                perror("Error: Data file not found");
+                break;
+            }
+            database_init(stmt->updateStmt.table);
+
+            if(!strcmp(metadata->table_name,stmt->updateStmt.table)) {
+                if (stmt->updateStmt.condition == NULL) {
+                    printf("Error: No condition specified for UPDATE statement.\n");
+                    break;
+                }
+
+                if (stmt->updateStmt.num_cond_columns == 0) {
+                    printf("Error: No columns specified in the condition.\n");
+                    break;
+                }
+
+                update_rows(stmt,metadata,metadata->num_columns);
+
+                printf("Updateing rows from table '%s' where condition is met...\n", stmt->updateStmt.table);
+            }
+
+
+            serialize_metadata(db, metadata);
+            set_file_dirty_db(db, true);
+            set_file_dirty_df(df,true);
+            commit_changes_db(db, metadata);
+            commit_changes_df(df);
+            
+            break;
+            
         }
         case STATEMENT_DROP: {
             if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {

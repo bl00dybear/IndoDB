@@ -18,5 +18,7 @@ void display_table(char **columns, int num_columns, MetadataPage *meta, Statemen
 bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int column_index);
 
 void delete_rows(Statement *stmt, MetadataPage *metadata,int num_columns);
+void update_rows(Statement *stmt, MetadataPage *metadata,int num_columns);
+
 
 #endif

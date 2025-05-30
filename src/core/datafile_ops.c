@@ -243,10 +243,12 @@ void* get_row_content(Statement *stmt, uint64_t *row_index) {
         
         if (strcmp(stmt->insertStmt.values[index].valueType,"Int") == 0) {
             if(strcmp(stmt->insertStmt.values[index].valueType,"Null") == 0)
-            {free(stmt->insertStmt.values[index].value);
-            free(stmt->insertStmt.values[index].valueType);
-            stmt->insertStmt.values[index].value = strdup("0");
-            stmt->insertStmt.values[index].valueType = strdup("Int");} 
+            {
+                free(stmt->insertStmt.values[index].value);
+                free(stmt->insertStmt.values[index].valueType);
+                stmt->insertStmt.values[index].value = strdup("0");
+                stmt->insertStmt.values[index].valueType = strdup("Int");
+            } 
 
             serialize_int(stmt,row_content,row_index,index);
         }
@@ -1046,7 +1048,6 @@ void recursive_delete_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
     if (node == NULL) {
         return;
     }
-    printf("asdasdasdasdasdasdasd\n\n");
     static void* visited_nodes[MAX_VISITED_NODES] = {0};
     static int visited_count = 0;
     
@@ -1349,13 +1350,414 @@ void delete_rows(Statement *stmt, MetadataPage *metadata,int num_columns) {
         close(pipe_to_ast[1]);
         close(pipe_from_ast[0]);
         
-        // Așteptăm terminarea procesului copil
         int status;
         waitpid(pid, &status, 0);
 
         close(pipe_from_ast[0]);
     }
- 
+     
+}
+
+
+
+void insert_updated_row(void * old_row_content, Statement * stmt,MetadataPage*meta){
+    uint64_t row_size;
+    memcpy(&row_size, old_row_content, sizeof(uint64_t));
+
+    void * new_row_content = malloc(MAX_BUFFER_SIZE);
+    int new_row_index=9;
+    int old_row_index=9;
+
+    set_row_flag(new_row_content,true);
+
+    for(int column_index=0;column_index<meta->num_columns;column_index+=1){
+        
+        int col_updated = -1;
+        for (int stmt_col_index=0;stmt_col_index<stmt->updateStmt.num_set_columns;stmt_col_index+=1){
+            if(!strcmp(meta->column_names[column_index],stmt->updateStmt.set_columns[stmt_col_index]))
+                col_updated=stmt_col_index;
+                break;
+        }
+
+        if(col_updated!=-1){
+            switch (meta->column_types[column_index])
+            {
+            case TYPE_INT:
+                int64_t value = strtoll(stmt->updateStmt.set_values[col_updated],NULL,10);
+                void*row_content_int = malloc(sizeof(int64_t));
+                *(int64_t*)row_content_int = value;
+
+                memcpy(new_row_content+new_row_index,row_content_int,sizeof(int64_t));
+                new_row_index+=sizeof(int64_t);
+                old_row_index+=sizeof(int64_t);
+
+                free(row_content_int);
+                
+                break;
+            case TYPE_VARCHAR:
+                uint32_t string_length = strlen(stmt->updateStmt.set_values[col_updated]);
+
+                void *string_length_int = malloc(sizeof(uint32_t));
+                *(uint32_t*)string_length_int = string_length;
+                memcpy(new_row_content+new_row_index,string_length_int,sizeof(uint32_t));
+                new_row_index+=sizeof(uint32_t);
+
+                void * string_content=malloc(string_length);
+                memcpy(string_content,stmt->updateStmt.set_values[col_updated],string_length);
+                memcpy(new_row_content+new_row_index,string_content,string_length);
+
+                new_row_index+=string_length;
+
+                memcpy(string_length_int,old_row_content+old_row_index,sizeof(uint32_t));
+                old_row_index+=sizeof(uint32_t);
+                old_row_index+=*(uint32_t*)string_length_int;
+
+                free(string_length_int);
+                free(string_content);
+                
+                break;
+            default:
+                break;
+            }
+        }else{
+            switch (meta->column_types[column_index])
+            {
+            case TYPE_INT:
+                memcpy(new_row_content+new_row_index,old_row_content+old_row_index,sizeof(int64_t));
+                old_row_index+=sizeof(int64_t);
+                new_row_index+=sizeof(int64_t);
+                
+                break;
+            case TYPE_VARCHAR:
+                uint32_t* str_len;
+                memcpy(str_len,old_row_content+old_row_index,sizeof(uint32_t));
+                memcpy(new_row_content+new_row_index,old_row_content+old_row_index,sizeof(uint32_t));
+
+                new_row_index+=sizeof(uint32_t);
+                old_row_index+=sizeof(uint32_t);
+
+                memcpy(new_row_index+new_row_index,old_row_content+old_row_index,*str_len);
+
+                new_row_index+=(*str_len);
+                old_row_index+=(*str_len);
+                break;
+            default:
+                break;
+            }
+
+        }
+
+        set_row_size(new_row_content,new_row_index);
+
+        void * written_address = write_row(df,new_row_content,new_row_index);
+        const uint64_t current_id = global_id++;
+        insert(current_id,written_address);
+
+    }
+
+
+
+}
+
+
+
+
+void recursive_update_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
+                                       char **cond_columns, MetadataPage *metadata,
+                                    int num_columns, int num_cond_columns,Statement*stmt){
+
+    if (node == NULL) {
+        return;
+    }
+
+    static void* visited_nodes[MAX_VISITED_NODES] = {0};
+    static int visited_count = 0;
     
-    printf("Deleting rows from table '%s' where condition is met...\n", stmt->deleteStmt.table);
+    for (int v = 0; v < visited_count; v++) {
+        if (visited_nodes[v] == node) {
+            return;
+        }
+    }
+
+    if (visited_count < MAX_VISITED_NODES) {
+        visited_nodes[visited_count++] = node;
+    } else {
+        visited_count = 0;
+        visited_nodes[visited_count++] = node;
+    }
+    
+    for (int i = 1; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
+        
+        uint64_t offset = (uint64_t)node->raw_data[i];
+        
+        if (offset == 0 || offset >= df->size) {
+            continue;
+        }
+        
+        void *row_content = df->start_ptr + offset;
+        
+        uint64_t row_size;
+        memcpy(&row_size, row_content, sizeof(uint64_t));
+        
+        if (row_size < 9 || row_size > MAX_BUFFER_SIZE) {
+            continue;
+        }
+        
+        char condition_data[4096] = {0};
+        int condition_data_len = 0;
+        
+        bool flag;
+        memcpy(&flag, row_content + 8, sizeof(bool));
+        
+        void* row_content_mem = malloc(row_size-9);
+        if (!row_content_mem) {
+            fprintf(stderr, "Error: Memory allocation failed\n");
+            continue;
+        }
+        memcpy(row_content_mem, row_content+9, row_size-9);
+        
+        uint64_t row_byte_index = 0;
+        
+        typedef struct {
+            int type;
+            union {
+                char* str_value;
+                int64_t int_value;
+            };
+            uint32_t str_len;
+        } ColumnValue;
+        
+        ColumnValue values[MAX_COLUMNS];
+        
+        for (uint64_t col = 0; col < metadata->num_columns; col++) {
+            values[col].type = -1;
+            values[col].str_value = NULL;
+        }
+        
+        for (uint64_t col = 0; col < metadata->num_columns; col++) {
+            values[col].type = metadata->column_types[col];
+            
+            if (row_byte_index >= row_size-9) {
+                goto cleanup_row;
+            }
+            
+            switch (values[col].type) {
+                case TYPE_VARCHAR: {
+                    if (row_byte_index + sizeof(uint32_t) > row_size-9) {
+                        goto cleanup_row;
+                    }
+                    
+                    uint32_t string_len;
+                    memcpy(&string_len, row_content_mem + row_byte_index, sizeof(uint32_t));
+                    row_byte_index += sizeof(uint32_t);
+                    
+                    if (string_len > MAX_BUFFER_SIZE || row_byte_index + string_len > row_size-9) {
+                        goto cleanup_row;
+                    }
+                    
+                    values[col].str_value = malloc(string_len + 1);
+                    if (!values[col].str_value) {
+                        goto cleanup_row;
+                    }
+                    
+                    memcpy(values[col].str_value, row_content_mem + row_byte_index, string_len);
+                    values[col].str_value[string_len] = '\0';
+                    values[col].str_len = string_len;
+                    row_byte_index += string_len;
+                    break;
+                }
+                case TYPE_INT: {
+                    if (row_byte_index + sizeof(int64_t) > row_size-9) {
+                        goto cleanup_row;
+                    }
+                    
+                    memcpy(&values[col].int_value, row_content_mem + row_byte_index, sizeof(int64_t));
+                    row_byte_index += sizeof(int64_t);
+                    break;
+                }
+                default:
+                    values[col].type = -1;
+                    break;
+            }
+        }
+
+
+        condition_data_len = 0;
+        for (int j = 0; j < num_cond_columns; j++) {
+
+            int col_idx = -1;
+            for (uint64_t c = 0; c < metadata->num_columns; c++) {
+                if (strcmp(cond_columns[j], metadata->column_names[c]) == 0) {
+                    col_idx = c;
+                    break;
+                }
+            }
+
+            if (col_idx == -1) {
+                goto cleanup_row;
+            }
+            
+            int written = snprintf(condition_data + condition_data_len, 
+                                 sizeof(condition_data) - condition_data_len,
+                                 "%s ", cond_columns[j]);
+            condition_data_len += written;
+            
+            if (values[col_idx].type == TYPE_VARCHAR) {
+                written = snprintf(condition_data + condition_data_len,
+                                 sizeof(condition_data) - condition_data_len,
+                                 "\"%s\" ", values[col_idx].str_value);
+            } else if (values[col_idx].type == TYPE_INT) {
+                written = snprintf(condition_data + condition_data_len,
+                                 sizeof(condition_data) - condition_data_len,
+                                 "%ld ", values[col_idx].int_value);
+            } else {
+                written = snprintf(condition_data + condition_data_len,
+                                 sizeof(condition_data) - condition_data_len,
+                                 "NULL ");
+            }
+            condition_data_len += written;
+        }
+
+        condition_data[condition_data_len] = '\n';
+        condition_data_len++;
+        
+        condition_data[condition_data_len] = '\0';
+        
+
+        if (write(pipe_to_ast, condition_data, condition_data_len) == -1) {
+            fprintf(stderr, "Error writing to pipe\n");
+            goto cleanup_row;
+        }
+
+        usleep(100000); 
+
+        char response[10] = {0};
+        ssize_t bytes_read = read(pipe_from_ast, response, sizeof(response) - 1);
+        
+        if (bytes_read <= 0) {
+            fprintf(stderr, "Error reading from pipe or child exited\n");
+            goto cleanup_row;
+        }
+
+        printf("Key num: %n resp:%s\n",i, response);
+        
+
+        if (strncmp(response, "True", 4) == 0) {
+            bool flag=false;
+            memcpy(row_content + 8,&flag, sizeof(bool));
+            memcpy(df->start_ptr + offset + 8, &flag, sizeof(bool));
+            printf("%ld\n",node->keys[i]);
+            delete_value_from_tree(node->keys[i]);
+            i--;
+
+            insert_updated_row(row_content,stmt,metadata);
+
+            if (msync(df->start_ptr, df->size, MS_SYNC) != 0) {
+                perror("Error syncing memory to file");
+                return false;
+            }
+        }
+        
+    cleanup_row:
+        for (uint64_t col = 0; col < metadata->num_columns; col++) {
+            if (values[col].type == TYPE_VARCHAR && values[col].str_value != NULL) {
+                free(values[col].str_value);
+                values[col].str_value = NULL;
+            }
+        }
+        
+        if (row_content_mem) {
+            free(row_content_mem);
+        }
+    }
+    
+    if (node->plink != NULL) {
+        for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
+            if (node->plink[i] != NULL) {
+                if ((uintptr_t)node->plink[i] < MAX_VISITED_NODES || 
+                    (uintptr_t)node->plink[i] > (uintptr_t)df->start_ptr + df->size) {
+                    continue;
+                }
+                
+                recursive_update_rows(node->plink[i], pipe_to_ast, pipe_from_ast,
+                                                 cond_columns, metadata,  num_columns, num_cond_columns,stmt);
+            }
+        }
+    }
+    
+    if (visited_count > 0) {
+        visited_count--;
+    }
+
+}
+
+
+
+
+
+void update_rows(Statement *stmt, MetadataPage *metadata,int num_columns){
+    if (!stmt || !metadata || stmt->type != STATEMENT_UPDATE) {
+        printf("Error: Invalid statement or metadata for row update\n");
+        return;
+    }
+
+    RowNode *node = root;
+    
+    int pipe_to_ast[2];
+    int pipe_from_ast[2];
+    
+    pid_t pid ;
+    
+    if(!(~(pipe(pipe_to_ast))) || !(~(pipe(pipe_from_ast)))) {
+        perror("Error creating pipes");
+        exit(EXIT_FAILURE);
+    }
+    
+    if(!(~(pid = fork()))) {
+        perror("Error forking");
+        close(pipe_to_ast[0]);
+        close(pipe_to_ast[1]);
+        close(pipe_from_ast[0]);
+        close(pipe_from_ast[1]);
+        exit(EXIT_FAILURE);
+    }
+    
+    
+    
+    if(!pid){
+        close(pipe_to_ast[1]);
+        dup2(pipe_to_ast[0],STDIN_FILENO);
+        close(pipe_to_ast[0]);
+        
+        close(pipe_from_ast[0]);
+        dup2(pipe_from_ast[1],STDOUT_FILENO);
+        close(pipe_from_ast[1]);
+        
+        if (access(AST_PATH, X_OK) != 0) {
+            perror("Cannot access AST executable");
+            exit(EXIT_FAILURE);
+        }
+        
+        execl(AST_PATH,AST_FILE_NAME,NULL);
+        
+        perror("Error executing AST");
+        exit(EXIT_FAILURE);
+    }else{
+        close(pipe_to_ast[0]);
+        close(pipe_from_ast[1]);
+        printf("asdasdasd\n\n");
+        recursive_update_rows(node, pipe_to_ast[1], pipe_from_ast[0], 
+                                          stmt->updateStmt.cond_column, metadata, num_columns, stmt->updateStmt.num_cond_columns,stmt);
+
+
+
+    close(pipe_to_ast[1]);
+    close(pipe_from_ast[0]);
+
+    // Așteptăm terminarea procesului copil
+    int status;
+    waitpid(pid, &status, 0);
+
+        close(pipe_from_ast[0]);
+    }
 }
