@@ -1230,7 +1230,6 @@ void recursive_delete_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         // fflush(stderr);  // Opțional pentru stderr
 
         // Read response from child process
-        printf("a iesit din pipe\n\n");
 
         usleep(100000); // Wait for the child process to finish processing
 
@@ -1360,103 +1359,83 @@ void delete_rows(Statement *stmt, MetadataPage *metadata,int num_columns) {
 
 
 
-void insert_updated_row(void * old_row_content, Statement * stmt,MetadataPage*meta){
+void insert_updated_row(void * old_row_content, Statement * stmt, MetadataPage*meta){
     uint64_t row_size;
     memcpy(&row_size, old_row_content, sizeof(uint64_t));
 
     void * new_row_content = malloc(MAX_BUFFER_SIZE);
-    int new_row_index=9;
-    int old_row_index=9;
+    int new_row_index = 9;
+    int old_row_index = 9;
 
-    set_row_flag(new_row_content,true);
+    set_row_flag(new_row_content, true);
 
-    for(int column_index=0;column_index<meta->num_columns;column_index+=1){
-        
+    for(int column_index = 0; column_index < meta->num_columns; column_index++) {
         int col_updated = -1;
-        for (int stmt_col_index=0;stmt_col_index<stmt->updateStmt.num_set_columns;stmt_col_index+=1){
-            if(!strcmp(meta->column_names[column_index],stmt->updateStmt.set_columns[stmt_col_index]))
-                col_updated=stmt_col_index;
-                break;
-        }
-
-        if(col_updated!=-1){
-            switch (meta->column_types[column_index])
-            {
-            case TYPE_INT:
-                int64_t value = strtoll(stmt->updateStmt.set_values[col_updated],NULL,10);
-                void*row_content_int = malloc(sizeof(int64_t));
-                *(int64_t*)row_content_int = value;
-
-                memcpy(new_row_content+new_row_index,row_content_int,sizeof(int64_t));
-                new_row_index+=sizeof(int64_t);
-                old_row_index+=sizeof(int64_t);
-
-                free(row_content_int);
-                
-                break;
-            case TYPE_VARCHAR:
-                uint32_t string_length = strlen(stmt->updateStmt.set_values[col_updated]);
-
-                void *string_length_int = malloc(sizeof(uint32_t));
-                *(uint32_t*)string_length_int = string_length;
-                memcpy(new_row_content+new_row_index,string_length_int,sizeof(uint32_t));
-                new_row_index+=sizeof(uint32_t);
-
-                void * string_content=malloc(string_length);
-                memcpy(string_content,stmt->updateStmt.set_values[col_updated],string_length);
-                memcpy(new_row_content+new_row_index,string_content,string_length);
-
-                new_row_index+=string_length;
-
-                memcpy(string_length_int,old_row_content+old_row_index,sizeof(uint32_t));
-                old_row_index+=sizeof(uint32_t);
-                old_row_index+=*(uint32_t*)string_length_int;
-
-                free(string_length_int);
-                free(string_content);
-                
-                break;
-            default:
+        
+        for (int stmt_col_index = 0; stmt_col_index < stmt->updateStmt.num_set_columns; stmt_col_index++) {
+            if(strcmp(meta->column_names[column_index], stmt->updateStmt.set_columns[stmt_col_index]) == 0) {
+                col_updated = stmt_col_index;
                 break;
             }
-        }else{
-            switch (meta->column_types[column_index])
-            {
-            case TYPE_INT:
-                memcpy(new_row_content+new_row_index,old_row_content+old_row_index,sizeof(int64_t));
-                old_row_index+=sizeof(int64_t);
-                new_row_index+=sizeof(int64_t);
-                
-                break;
-            case TYPE_VARCHAR:
-                uint32_t* str_len;
-                memcpy(str_len,old_row_content+old_row_index,sizeof(uint32_t));
-                memcpy(new_row_content+new_row_index,old_row_content+old_row_index,sizeof(uint32_t));
-
-                new_row_index+=sizeof(uint32_t);
-                old_row_index+=sizeof(uint32_t);
-
-                memcpy(new_row_index+new_row_index,old_row_content+old_row_index,*str_len);
-
-                new_row_index+=(*str_len);
-                old_row_index+=(*str_len);
-                break;
-            default:
-                break;
-            }
-
         }
 
-        set_row_size(new_row_content,new_row_index);
+        if(col_updated != -1) {
+            switch (meta->column_types[column_index]) {
+                case TYPE_INT: {
+                    int64_t value = strtoll(stmt->updateStmt.set_values[col_updated], NULL, 10);
+                    memcpy(new_row_content + new_row_index, &value, sizeof(int64_t));
+                    new_row_index += sizeof(int64_t);
+                    
+                    old_row_index += sizeof(int64_t);
+                    break;
+                }
+                case TYPE_VARCHAR: {
+                    uint32_t string_length = strlen(stmt->updateStmt.set_values[col_updated]);
+                    
+                    memcpy(new_row_content + new_row_index, &string_length, sizeof(uint32_t));
+                    new_row_index += sizeof(uint32_t);
+                    
+                    memcpy(new_row_content + new_row_index, stmt->updateStmt.set_values[col_updated], string_length);
+                    new_row_index += string_length;
+                    
+                    uint32_t old_string_len;
+                    memcpy(&old_string_len, old_row_content + old_row_index, sizeof(uint32_t));
+                    old_row_index += sizeof(uint32_t) + old_string_len;
+                    break;
+                }
+            }
+        } else {
+            switch (meta->column_types[column_index]) {
+                case TYPE_INT: {
+                    memcpy(new_row_content + new_row_index, old_row_content + old_row_index, sizeof(int64_t));
+                    old_row_index += sizeof(int64_t);
+                    new_row_index += sizeof(int64_t);
+                    break;
+                }
+                case TYPE_VARCHAR: {
+                    uint32_t str_len;
+                    memcpy(&str_len, old_row_content + old_row_index, sizeof(uint32_t));
+                    
+                    memcpy(new_row_content + new_row_index, &str_len, sizeof(uint32_t));
+                    new_row_index += sizeof(uint32_t);
+                    old_row_index += sizeof(uint32_t);
 
-        void * written_address = write_row(df,new_row_content,new_row_index);
-        const uint64_t current_id = global_id++;
-        insert(current_id,written_address);
-
+                    memcpy(new_row_content + new_row_index, old_row_content + old_row_index, str_len);
+                    new_row_index += str_len;
+                    old_row_index += str_len;
+                    break;
+                }
+            }
+        }
     }
 
-
-
+    // Setează dimensiunea finală și inserează UN SINGUR rând
+    set_row_size(new_row_content, new_row_index);
+    void * written_address = write_row(df, new_row_content, new_row_index);
+    const uint64_t current_id = global_id++;
+    insert(current_id, written_address);
+    
+    free(new_row_content);
 }
 
 
@@ -1472,6 +1451,8 @@ void recursive_update_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
 
     static void* visited_nodes[MAX_VISITED_NODES] = {0};
     static int visited_count = 0;
+
+    // printf("Ajunge la intrare in recursive update rows\n");
     
     for (int v = 0; v < visited_count; v++) {
         if (visited_nodes[v] == node) {
@@ -1485,8 +1466,8 @@ void recursive_update_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         visited_count = 0;
         visited_nodes[visited_count++] = node;
     }
-    
-    for (int i = 1; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
+    uint16_t keynr = node->num_keys;
+    for (int i = 1; i <= keynr && i < ROW_MAX_KEYS; i++) {
         
         uint64_t offset = (uint64_t)node->raw_data[i];
         
@@ -1508,6 +1489,9 @@ void recursive_update_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         
         bool flag;
         memcpy(&flag, row_content + 8, sizeof(bool));
+
+        if(!flag)
+            return;
         
         void* row_content_mem = malloc(row_size-9);
         if (!row_content_mem) {
@@ -1623,32 +1607,43 @@ void recursive_update_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         
         condition_data[condition_data_len] = '\0';
         
+        printf("A scris in pipe%s\n",condition_data);
 
         if (write(pipe_to_ast, condition_data, condition_data_len) == -1) {
             fprintf(stderr, "Error writing to pipe\n");
             goto cleanup_row;
         }
 
+        // printf("A scris in pipe\n");
+
         usleep(100000); 
 
         char response[10] = {0};
         ssize_t bytes_read = read(pipe_from_ast, response, sizeof(response) - 1);
+
+        printf("A citit din pipe: %s\n",response);
         
         if (bytes_read <= 0) {
             fprintf(stderr, "Error reading from pipe or child exited\n");
             goto cleanup_row;
         }
 
-        printf("Key num: %n resp:%s\n",i, response);
+        // printf("Key num: %ld resp\n\n\n",i);
         
 
         if (strncmp(response, "True", 4) == 0) {
             bool flag=false;
+            // printf("Jeg de program \n\n");
             memcpy(row_content + 8,&flag, sizeof(bool));
+            // printf("Intre jegurile de memcpy\n");
             memcpy(df->start_ptr + offset + 8, &flag, sizeof(bool));
-            printf("%ld\n",node->keys[i]);
+            // printf("%ld\n",node->keys[i]);
+
+            // printf("Urmeaza sa stearga cheia: %ld\n",node->keys[i]);
             delete_value_from_tree(node->keys[i]);
             i--;
+            keynr--;
+            // printf("Ajunge inainte de insert updated row\n");
 
             insert_updated_row(row_content,stmt,metadata);
 
@@ -1669,8 +1664,12 @@ void recursive_update_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         if (row_content_mem) {
             free(row_content_mem);
         }
+
+        // printf("Dupa cleanup\n");
     }
     
+    // printf("Inainte de a parcurge nebunii\n");
+
     if (node->plink != NULL) {
         for (int i = 0; i <= node->num_keys && i < ROW_MAX_KEYS; i++) {
             if (node->plink[i] != NULL) {
@@ -1705,7 +1704,9 @@ void update_rows(Statement *stmt, MetadataPage *metadata,int num_columns){
     
     int pipe_to_ast[2];
     int pipe_from_ast[2];
-    
+
+    // printf("Intra in update rows\n");
+
     pid_t pid ;
     
     if(!(~(pipe(pipe_to_ast))) || !(~(pipe(pipe_from_ast)))) {
@@ -1745,7 +1746,12 @@ void update_rows(Statement *stmt, MetadataPage *metadata,int num_columns){
     }else{
         close(pipe_to_ast[0]);
         close(pipe_from_ast[1]);
-        printf("asdasdasd\n\n");
+        // printf("asdasdasd\n\n");    
+
+        // for(int iii=0;iii<stmt->updateStmt.num_cond_columns;iii+=1){
+        //     printf("%s\n",stmt->updateStmt.cond_column[iii]);
+        // }
+
         recursive_update_rows(node, pipe_to_ast[1], pipe_from_ast[0], 
                                           stmt->updateStmt.cond_column, metadata, num_columns, stmt->updateStmt.num_cond_columns,stmt);
 
@@ -1754,7 +1760,6 @@ void update_rows(Statement *stmt, MetadataPage *metadata,int num_columns){
     close(pipe_to_ast[1]);
     close(pipe_from_ast[0]);
 
-    // Așteptăm terminarea procesului copil
     int status;
     waitpid(pid, &status, 0);
 
