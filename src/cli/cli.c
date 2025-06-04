@@ -29,6 +29,22 @@ int is_exit_or_quit(const char *line) {
     return 0;
 }
 
+int is_transaction_op(const char *line) {
+    char lower[MAX_INPUT_SIZE];
+    size_t len = strlen(line);
+    for (size_t i = 0; i < len && i < MAX_INPUT_SIZE - 1; ++i) {
+        lower[i] = tolower(line[i]);
+    }
+    lower[len] = '\0';
+
+    // return diff flag
+    if (strcmp(lower, "start transaction") == 0 || strcmp(lower, "start transaction;") == 0) return 1;
+    if (strcmp(lower, "commit") == 0 || strcmp(lower, "commit;") == 0) return 2;
+    if (strcmp(lower, "rollback") == 0 || strcmp(lower, "rollback;") == 0) return 3;
+
+    return 0;
+}
+
 int read_line(char *buf, size_t size) {
     int len = 0, pos = 0, hist_pos = hist_len;
     char c;
@@ -122,6 +138,12 @@ int cli() {
                 printf("Bye\n");
                 fflush(stdout);
                 return 0;
+            }
+
+            int trans_op = is_transaction_op(line);
+            if (trans_op) {
+                // here we handle the transaction ops
+                continue;
             }
 
             if (strlen(line) == 0 && strlen(input) == 0) {
