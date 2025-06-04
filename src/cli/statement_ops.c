@@ -1313,7 +1313,7 @@ bool verify_constraints(Statement *stmt, MetadataPage *metadata) {
             }
             bool is_unique = constraint_unique(root, stmt, metadata, i);
             if (!is_unique) {
-                printf("Error: Column \'%s\' must be unique\n", metadata->column_names[i]);
+                printf("Error: PK \'%s\' must be unique\n", metadata->column_names[i]);
                 return false;
             }
         }

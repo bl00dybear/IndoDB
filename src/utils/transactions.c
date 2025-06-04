@@ -12,6 +12,8 @@
 
 #define COPY_BUFFER_SIZE  (64 * 1024)
 #define PATH_MAX 4096
+#define BACKUP_PATH "../backup"
+#define DATABASE_PATH "../databases"
 
 
 // utils for file management -> ignore their internal process
@@ -239,10 +241,9 @@ int rename_directory(const char *oldpath, const char *newpath) {
 
 // actual handlers to use
 int create_backup(){
-    const char *original_dir = "databases";
-    const char *backup_dir   = "backup";
+    const char *original_dir = DATABASE_PATH;
+    const char *backup_dir   = BACKUP_PATH;
 
-    printf("Starting new transaction...\n");
     if (copy_directory(original_dir, backup_dir) < 0) {
         fprintf(stderr, "Error: failed to copy directory.\n");
         return 0;
@@ -251,3 +252,39 @@ int create_backup(){
     return 1;
 }
 
+int restore_backup(){
+    const char *backup_dir   = BACKUP_PATH;
+    const char *original_dir = DATABASE_PATH;
+
+    if (remove_directory(original_dir) < 0) {
+        fprintf(stderr, "Error: failed to remove original directory.\n");
+        return 0;
+    }
+
+    if (rename_directory(backup_dir, original_dir) < 0) {
+        fprintf(stderr, "Error: failed to rename backup directory.\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+int remove_backup(){
+    const char *backup_dir = BACKUP_PATH;
+
+    if (remove_directory(backup_dir) < 0) {
+        fprintf(stderr, "Error: failed to remove backup directory.\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+int backup_exists() {
+    const char *backup_dir = BACKUP_PATH;
+    struct stat st;
+    if (stat(backup_dir, &st) != 0) {
+        return 0;
+    }
+    return S_ISDIR(st.st_mode);
+}
