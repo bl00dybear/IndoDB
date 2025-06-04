@@ -973,6 +973,7 @@ void set_table_parameters(MetadataPage *metadata, Statement *stmt) {
 }
 
 bool is_data_in_row(int column_index, void* row_content,Statement* stmt) {
+        row_content+=9;
         for(int col = 0; col < metadata->num_columns; col+=1){
             if(metadata->column_types[col] == TYPE_VARCHAR){
                 uint32_t string_length;
@@ -1025,7 +1026,7 @@ bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int
         uint64_t row_byte_index = 0;
 
         if(is_data_in_row(column_index, row_content,stmt)){
-            return true; 
+            return false; 
         }
 
     }
@@ -1038,7 +1039,7 @@ bool constraint_unique(RowNode *node, Statement*stmt, MetadataPage *metadata,int
         }
     }
 
-    return false;
+    return true;
 }
 
 
