@@ -1,0 +1,8 @@
+indodb> CREATE DATABASE db01;
+Error: Database 'db01' already exists.
+indodb> USE DATABASE db01;
+Database changed to 'db01'
+indodb> CREATE TABLE nums(n INT);
+Error: Table 'nums' already exists.
+indodb> INSERT INTO nums VALUES (10);
+indodb> UPDATE nums SET n = 15 WHERE n = 10;

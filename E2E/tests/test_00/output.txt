@@ -1,8 +1,30 @@
-indodb> CREATE DATABASE test0;
-Error: Database 'test0' already exists.
-indodb> USE DATABASE test0;
-Database changed to 'test0'
-indodb> CREATE TABLE users(id INT PRIMARY KEY, name TEXT);
-Error: Invalid SQL Statement
-indodb> INSERT INTO users VALUES (1, 'Alice');
-Error: corrupted database
+indodb> CREATE DATABASE db00;
+Error: Database 'db00' already exists.
+indodb> USE DATABASE db00;
+Database changed to 'db00'
+indodb> CREATE TABLE books(id INT, title VARCHAR(100));
+Error: Table 'books' already exists.
+indodb> SELECT * FROM books;
+
++----------------------+----------------------+
+| id                   | title                |
++----------------------+----------------------+
+| 1                    | Dune                 |
++----------------------+----------------------+
+| 2                    | 1984                 |
++----------------------+----------------------+
+| 1                    | Dune                 |
++----------------------+----------------------+
+| 2                    | 1984                 |
++----------------------+----------------------+
+| 1                    | Dune                 |
++----------------------+----------------------+
+| 2                    | 1984                 |
++----------------------+----------------------+
+| 1                    | Dune                 |
++----------------------+----------------------+
+| 2                    | 1984                 |
++----------------------+----------------------+
+
+indodb> exit
+Bye

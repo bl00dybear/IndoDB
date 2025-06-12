@@ -48,16 +48,23 @@ def main(root: str = "tests", sleep_sec: float = 0.05):
     rezultatul este scris in output.txt
     si error.txt
     """
+
+# nou – acceptă numai „test_” + exact două cifre
     test_dirs = sorted(
         d for d in os.listdir(root)
-        if d.startswith("test_") and os.path.isdir(os.path.join(root, d))
+        if d.startswith("test_")
+            and len(d) == 7          # 5 caractere „test_” + 2 cifre
+            and d[5:].isdigit()      # sufixul este numeric
+            and os.path.isdir(os.path.join(root, d))
     )
-    
+
     for td in test_dirs:
+        print(td)
         dir_path = os.path.join(root, td)
         input_file = os.path.join(dir_path, "input.txt")
         output_file = os.path.join(dir_path, "output.txt")
         error_file = os.path.join(dir_path, "error.txt")
+        
 
         sql = read_file(input_file)
         comenzi = continut_to_list(sql)
@@ -71,8 +78,11 @@ def main(root: str = "tests", sleep_sec: float = 0.05):
             bufsize=0,
         )
 
+
+
         try:
             for cmd in comenzi:
+
                 line = cmd.strip()
                 if line.lower() in {"exit"}:
                     continue

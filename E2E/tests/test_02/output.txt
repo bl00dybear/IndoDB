@@ -1,8 +1,4 @@
-indodb> CREATE DATABASE test0;
-Error: Database 'test0' already exists.
-indodb> USE DATABASE test0;
-Database changed to 'test0'
-indodb> CREATE TABLE users(id INT PRIMARY KEY, name TEXT);
-Error: Invalid SQL Statement
-indodb> INSERT INTO users VALUES (1, 'Alice');
-Error: corrupted database
+indodb> USE DATABASE db00;
+Database changed to 'db00'
+indodb> INSERT INTO books(id, title) VALUES (2,'1984');
+indodb> DELETE FROM books WHERE id = 1;
