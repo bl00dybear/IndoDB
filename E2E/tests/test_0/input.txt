@@ -1,0 +1,6 @@
+CREATE DATABASE test0;
+USE DATABASE test0;
+CREATE TABLE users(id INT PRIMARY KEY, name TEXT);
+INSERT INTO users VALUES (1, 'Alice');
+INSERT INTO users VALUES (2, 'Bob');
+SELECT * FROM users ORDER BY id;

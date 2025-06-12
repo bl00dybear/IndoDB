@@ -1,0 +1,26 @@
+indodb> echo "CREATE DATABASE test1;
+Error: Invalid SQL Statement
+indodb> "       | ./mycli;
+Error: Invalid SQL Statement
+indodb> echo "USE DATABASE test1;
+Error: Invalid SQL Statement
+indodb> "          | ./mycli;
+Error: Invalid SQL Statement
+indodb> echo "CREATE TABLE users(id INT PRIMARY KEY, name TEXT);
+Error: Invalid SQL Statement
+indodb> " | ./mycli;
+Error: Invalid SQL Statement
+indodb> echo "INSERT INTO users VALUES (1, 'Alice');
+Error: Invalid SQL Statement
+indodb> "             | ./mycli;
+Error: Invalid SQL Statement
+indodb> echo "INSERT INTO users VALUES (2, 'Bob');
+Error: Invalid SQL Statement
+indodb> "               | ./mycli;
+Error: Invalid SQL Statement
+indodb> echo "SELECT * FROM users ORDER BY id;
+Error: Invalid SQL Statement
+indodb> "                   | ./mycli;
+Error: Invalid SQL Statement
+indodb> exit
+Bye

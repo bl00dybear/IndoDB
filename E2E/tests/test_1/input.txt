@@ -1,0 +1,6 @@
+echo "CREATE DATABASE test1;"       | ./mycli ;
+echo "USE DATABASE test1;"          | ./mycli ;
+echo "CREATE TABLE users(id INT PRIMARY KEY, name TEXT);" | ./mycli ;
+echo "INSERT INTO users VALUES (1, 'Alice');"             | ./mycli ;
+echo "INSERT INTO users VALUES (2, 'Bob');"               | ./mycli ;
+echo "SELECT * FROM users ORDER BY id;"                   | ./mycli
