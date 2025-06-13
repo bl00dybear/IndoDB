@@ -1,4 +1,5 @@
 #include "../include/cli/cli.h"
+// #include "../src/utils/transactions.c"
 
 
 void disable_raw_mode() {
@@ -25,6 +26,59 @@ int is_exit_or_quit(const char *line) {
     if (strcmp(lower, "exit") == 0 || strcmp(lower, "exit;") == 0 ||
         strcmp(lower, "quit") == 0 || strcmp(lower, "quit;") == 0) {
         return 1;
+    }
+    return 0;
+}
+
+int is_transaction_op(const char *line) {
+    char lower[MAX_INPUT_SIZE];
+    size_t len = strlen(line);
+    for (size_t i = 0; i < len && i < MAX_INPUT_SIZE - 1; ++i) {
+        lower[i] = tolower(line[i]);
+    }
+    // remove trailing spaces if any
+    while (len > 0 && (lower[len - 1] == ' ' || lower[len - 1] == '\n' || lower[len - 1] == '\r')) len--;
+    lower[len] = '\0';
+
+    // return diff flag
+    if (strcmp(lower, "start transaction ;") == 0 || strcmp(lower, "start transaction;") == 0) return 1;
+    if (strcmp(lower, "commit ;") == 0 || strcmp(lower, "commit;") == 0) return 2;
+    if (strcmp(lower, "rollback ;") == 0 || strcmp(lower, "rollback;") == 0) return 3;
+
+    return 0;
+}
+
+int trans_handler(int flag){
+    if(flag == 1) {
+        // start new transaction
+        // first check if a transaction is already start
+        if(backup_exists()){
+            printf("Error: Transaction already started\n");
+            return -1;
+        }
+        // now create backup
+        create_backup();
+        printf("Transaction started\n");
+
+    } else if(flag == 2) {
+        // commit the last transaction
+        if(!backup_exists()){
+            printf("Error: No transaction started\n");
+            return -1;
+        }
+        remove_backup();
+        printf("Transaction committed\n");
+    } else if(flag == 3) {
+        // rollback the last transaction
+        if(!backup_exists()){
+            printf("Error: No transaction started\n");
+            return -1;
+        }
+        restore_backup();
+        printf("Transaction rolled back\n");
+    } else {
+        fprintf(stderr, "Error: Invalid transaction operation.\n");
+        return -1;
     }
     return 0;
 }
@@ -146,6 +200,14 @@ int cli() {
         }
 
         if (strlen(input) > 0) {
+            // handle transactions first
+            int trans_flag = is_transaction_op(input);
+            if (trans_flag) {
+                trans_handler(trans_flag);
+                fflush(stdout);
+                continue;
+            }
+
             FILE *fp = popen("../output/sql_parser", "w");
             if (fp == NULL) {
                 perror("Error opening pipe");
