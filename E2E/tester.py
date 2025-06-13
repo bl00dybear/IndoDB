@@ -49,12 +49,12 @@ def main(root: str = "tests", sleep_sec: float = 0.05):
     si error.txt
     """
 
-# nou – acceptă numai „test_” + exact două cifre
+
     test_dirs = sorted(
         d for d in os.listdir(root)
         if d.startswith("test_")
             and len(d) == 7          # 5 caractere „test_” + 2 cifre
-            and d[5:].isdigit()      # sufixul este numeric
+            and d[5:].isdigit()
             and os.path.isdir(os.path.join(root, d))
     )
 

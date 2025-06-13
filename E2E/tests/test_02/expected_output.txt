@@ -1,2 +1,4 @@
+indodb> USE DATABASE db00;
 Database changed to 'db00'
-1984
+indodb> INSERT INTO books(id, title) VALUES (2,'1984');
+indodb> DELETE FROM books WHERE id = 1;
