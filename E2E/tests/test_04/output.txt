@@ -1,3 +1,0 @@
-indodb> SHOW DATABASES;
-indodb> exit
-Bye

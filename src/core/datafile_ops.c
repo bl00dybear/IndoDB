@@ -792,10 +792,10 @@ void recursive_display_rows_where_clause(RowNode *node, int pipe_to_ast, int pip
         // Check if condition was true
         if (strncmp(response, "True", 4) == 0 && flag) {
             // Display this row
-            printf("|");
+            // printf("|");
             print_row_content(row_content, metadata, column_indexes, num_columns);
-            printf("\n");
-            print_separator(num_columns);
+            // printf("\n");
+            // print_separator(num_columns);
         }
         
     cleanup_row:

@@ -1,42 +1,18 @@
-CREATE DATABASE db00;
-USE DATABASE db00;
-CREATE TABLE books(id INT, title VARCHAR(100));
-SELECT * FROM books;
+create database db00;
+use database db00;
+create table table00 (id int, name varchar(50));
+insert into table00 values (1, 'Alice');
+insert into table00 values (2, 'Bob');
+select * from table00;
 
 Database changed to 'db00'
-Table books created successfully!
+Table table00 created successfully!
++----------------------+----------------------+
+| id                   | name                 |
++----------------------+----------------------+
+| 1                    | Alice                |
++----------------------+----------------------+
+| 2                    | Bob                  |
++----------------------+----------------------+
 
 
-USE DATABASE db00;
-INSERT INTO books(id, title) VALUES (1,'Dune');
-SELECT * FROM books;
-
-Database changed to 'db00'
-1|Dune
-
-
-USE DATABASE db00;
-INSERT INTO books(id, title) VALUES (2,'1984');
-DELETE FROM books WHERE id = 1;
-SELECT title FROM books;
-
-Database changed to 'db00'
-1984
-
-
-CREATE DATABASE db01;
-USE DATABASE db01;
-CREATE TABLE nums(n INT);
-INSERT INTO nums VALUES (10);
-UPDATE nums SET n = 15 WHERE n = 10;
-SELECT * FROM nums;
-
-Database changed to 'db01'
-Table nums created successfully!
-15
-
-
-SHOW DATABASES;
-
-db00
-db01

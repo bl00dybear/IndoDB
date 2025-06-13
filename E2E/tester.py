@@ -38,7 +38,7 @@ def continut_to_list(continut):
     comenzi = [comanda.strip() for comanda in comenzi if comanda.strip()]
     return comenzi
 
-def main(root: str = "tests", sleep_sec: float = 0.05):
+def run_tests(root: str = "tests", sleep_sec: float = 0.05):
     """
     Executa fiecare test din test_* si trimite
     toate fisierele din input.txt intr-un singur
@@ -97,10 +97,19 @@ def main(root: str = "tests", sleep_sec: float = 0.05):
 
             stdout, stderr = proc.communicate()
 
+            lines = stdout.splitlines(keepends=True)
+            # delete the last 2 lines
+            stdout = ''.join(lines[:-2]) if len(lines) > 2 else ''.join(lines)
+
+            # remove every line that starts with the prompt
+            stdout = ''.join(line for line in stdout.splitlines(keepends=True) if not line.startswith(PROMPT))
+            stderr = ''.join(line for line in stderr.splitlines(keepends=True) if not line.startswith(PROMPT))
+            
+
             write_file(output_file, stdout)
             write_file(error_file, stderr)
 
         finally:
             with contextlib.suppress(Exception):
                 proc.kill()
-main("tests")
+# main("tests")
