@@ -1,0 +1,7 @@
+create database db03;
+use database db03;
+create table table02 (id int primary key , name varchar(50));
+insert into table02 values (1, 'Alice');
+insert into table02 values (2, 'Bogdan');
+insert into table02 values (3, 'Cristi');
+select name from table02 where id=2;

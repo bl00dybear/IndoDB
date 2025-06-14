@@ -1,0 +1,24 @@
+Database changed to 'test_transaction02'
+Table transaction_table02 created successfully!
+Transaction started
+
++----------------------+----------------------+
+| id                   | value                |
++----------------------+----------------------+
+| 1                    | 100                  |
++----------------------+----------------------+
+| 2                    | 200                  |
++----------------------+----------------------+
+| 3                    | 300                  |
++----------------------+----------------------+
+
+Table 'transaction_table02' dropped successfully.
+Transaction rolled back
+
++----------------------+----------------------+
+| id                   | value                |
++----------------------+----------------------+
+| 1                    | 100                  |
++----------------------+----------------------+
+
+Database 'test_transaction02' dropped successfully!

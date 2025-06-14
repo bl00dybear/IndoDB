@@ -1,0 +1,10 @@
+create database db07;
+use database db07;
+create table table05 (id int primary key, name varchar(50), age int, city varchar(50));
+insert into table05 values (1, 'Radu', 28, 'Oradea');
+insert into table05 values (2, 'Irina', 31, 'Cluj');
+insert into table05 values (3, 'George', 30, 'Sibiu');
+insert into table05 values (4, 'Vlad', 35, 'Iasi');
+insert into table05 values (5, 'Mara', 26, 'Brasov');
+delete from table05 where age >= 30 and id < 5;
+select id, name, age, city from table05;

@@ -1217,7 +1217,7 @@ void recursive_delete_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         
         condition_data[condition_data_len] = '\0';
         
-        printf("Condition data: %s\n", condition_data);
+        // printf("Condition data: %s\n", condition_data);
 
         // printf("\n");
 
@@ -1243,16 +1243,16 @@ void recursive_delete_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         }
         
         // Check if condition was true
-        printf("%s\n\n",response);
+        // printf("%s\n\n",response);
 
         if (strncmp(response, "True", 4) == 0) {
             bool flag=false;
             memcpy(row_content + 8,&flag, sizeof(bool));
             memcpy(df->start_ptr + offset + 8, &flag, sizeof(bool));
-            printf("%ld\n",node->keys[i]);
+            // printf("%ld\n",node->keys[i]);
             delete_value_from_tree(node->keys[i]);
             i--;
-            printf("A mers\n\n");
+            // printf("A mers\n\n");
             if (msync(df->start_ptr, df->size, MS_SYNC) != 0) {
                 perror("Error syncing memory to file");
                 return false;
@@ -1297,7 +1297,7 @@ void delete_rows(Statement *stmt, MetadataPage *metadata,int num_columns) {
         printf("Error: Invalid statement or metadata for row deletion\n");
         return;
     }
-    printf("asddd\n\n");
+    // printf("asddd\n\n");
     RowNode *node = root;
     
     int pipe_to_ast[2];
@@ -1342,10 +1342,10 @@ void delete_rows(Statement *stmt, MetadataPage *metadata,int num_columns) {
     }else{
         close(pipe_to_ast[0]);
         close(pipe_from_ast[1]);
-        printf("asdasdasd\n\n");
+        // printf("asdasdasd\n\n");
         recursive_delete_rows(node, pipe_to_ast[1], pipe_from_ast[0], 
                                           stmt->deleteStmt.cond_column, metadata, num_columns, stmt->deleteStmt.num_cond_columns);
-            printf("s-a afisat\n\n");
+            // printf("s-a afisat\n\n");
         // Închidem pipe-urile rămase
         close(pipe_to_ast[1]);
         close(pipe_from_ast[0]);
@@ -1608,7 +1608,7 @@ void recursive_update_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         
         condition_data[condition_data_len] = '\0';
         
-        printf("A scris in pipe%s\n",condition_data);
+        // printf("A scris in pipe%s\n",condition_data);
 
         if (write(pipe_to_ast, condition_data, condition_data_len) == -1) {
             fprintf(stderr, "Error writing to pipe\n");
@@ -1622,7 +1622,7 @@ void recursive_update_rows(RowNode *node, int pipe_to_ast, int pipe_from_ast,
         char response[10] = {0};
         ssize_t bytes_read = read(pipe_from_ast, response, sizeof(response) - 1);
 
-        printf("A citit din pipe: %s\n",response);
+        // printf("A citit din pipe: %s\n",response);
         
         if (bytes_read <= 0) {
             fprintf(stderr, "Error reading from pipe or child exited\n");

@@ -82,6 +82,5 @@ def main():
         except Exception as exc:
             print(f"[!] Eroare la scriere în {test_dir}: {exc}", file=sys.stderr)
 
-    print("gataaa")
 
 main()

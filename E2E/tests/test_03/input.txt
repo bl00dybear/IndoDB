@@ -1,0 +1,3 @@
+create database testdb1;
+use database testdb1;
+show tables;

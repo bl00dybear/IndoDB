@@ -1,0 +1,10 @@
+create database db05;
+use database db05;
+create table employees (id int primary key, name varchar(50), age int, salary int);
+insert into employees values (1, 'Ioana', 28, 4000);
+insert into employees values (2, 'Mihai', 35, 5200);
+insert into employees values (3, 'Andrei', 30, 4800);
+insert into employees values (4, 'Sorina', 42, 6100);
+insert into employees values (5, 'Laura', 29, 4500);
+update employees set salary=5000 where age > 28 and age <= 35;
+select id, name, age, salary from employees;

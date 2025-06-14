@@ -1097,6 +1097,376 @@ void process_statement(Statement *stmt) {
             printf("Database changed to '%s'\n", stmt->useDbStmt.database);
             break;
         }
+        case STATEMENT_SHOW_DB: {
+            printf("\n");
+            DIR *dir;
+            struct dirent *entry;
+            char databases[100][256];  // Array pentru a stoca numele bazelor de date
+            int database_count = 0;
+            
+            // Deschide directorul databases
+            dir = opendir("../databases");
+            if (dir == NULL) {
+                perror("Error: Cannot open databases directory");
+                printf("Make sure the '../databases' directory exists.\n");
+                break;
+            }
+            
+            // Colectează toate bazele de date
+            while ((entry = readdir(dir)) != NULL) {
+                // Ignoră intrările "." și ".."
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                    continue;
+                }
+                
+                // Construiește calea completă
+                char full_path[512];
+                snprintf(full_path, sizeof(full_path), "../databases/%s", entry->d_name);
+                
+                struct stat statbuf;
+                if (stat(full_path, &statbuf) == 0 && S_ISDIR(statbuf.st_mode)) {
+                    // Este un director valid
+                    if (database_count < 100) {  // Protecție împotriva overflow-ului
+                        strcpy(databases[database_count], entry->d_name);
+                        database_count++;
+                    }
+                }
+            }
+            
+            closedir(dir);
+            
+            // Afișează rezultatele
+            if (database_count == 0) {
+                printf("No databases found.\n");
+            } else {
+                // Găsește lungimea maximă pentru formatare
+                int max_length = strlen("Database");
+                for (int i = 0; i < database_count; i++) {
+                    int len = strlen(databases[i]);
+                    if (len > max_length) {
+                        max_length = len;
+                    }
+                }
+                
+                // Afișează header-ul tabelului
+                printf("+");
+                for (int i = 0; i < max_length + 2; i++) printf("-");
+                printf("+\n");
+                
+                printf("| %-*s |\n", max_length, "Database");
+                
+                printf("+");
+                for (int i = 0; i < max_length + 2; i++) printf("-");
+                printf("+\n");
+                
+                // Afișează bazele de date
+                for (int i = 0; i < database_count; i++) {
+                    printf("| %-*s |\n", max_length, databases[i]);
+                }
+                
+                printf("+");
+                for (int i = 0; i < max_length + 2; i++) printf("-");
+                printf("+\n");
+                
+                printf("\n%d database(s) found.\n", database_count);
+            }
+            
+            break;
+        }
+        case STATEMENT_SHOW_TB: {
+            if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
+                printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
+                break;
+            }
+            
+            printf("\nTables in database:\n");
+            
+            DIR *dir;
+            struct dirent *entry;
+            char tables[100][256];  // Array pentru a stoca numele tabelelor
+            int table_count = 0;
+            
+            // Deschide directorul bazei de date curente
+            dir = opendir(DB_FILENAME);
+            if (dir == NULL) {
+                perror("Error: Cannot open database directory");
+                printf("Database directory '%s' might not exist.\n", DB_FILENAME);
+                break;
+            }
+            
+            // Colectează toate fișierele care sunt tabele (se termină cu .bin)
+            while ((entry = readdir(dir)) != NULL) {
+                // Ignoră intrările "." și ".."
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                    continue;
+                }
+                
+                // Verifică dacă este un fișier btree (btree*.bin)
+                if (strncmp(entry->d_name, "btree", 5) == 0) {
+                    char *dot_pos = strrchr(entry->d_name, '.');
+                    if (dot_pos && strcmp(dot_pos, ".bin") == 0) {
+                        // Extrage numele tabelului (elimină "btree" din început și ".bin" de la sfârșit)
+                        char table_name[256];
+                        strncpy(table_name, entry->d_name + 5, sizeof(table_name) - 1);  // Sări peste "btree"
+                        table_name[sizeof(table_name) - 1] = '\0';
+                        
+                        // Elimină ".bin" de la sfârșit
+                        char *bin_pos = strstr(table_name, ".bin");
+                        if (bin_pos) {
+                            *bin_pos = '\0';
+                        }
+                        
+                        // Verifică dacă există și fișierul data corespunzător
+                        char data_file_path[512];
+                        snprintf(data_file_path, sizeof(data_file_path), "%s/data%s.bin", DB_FILENAME, table_name);
+                        
+                        if (access(data_file_path, F_OK) == 0) {
+                            // Ambele fișiere există, deci este un tabel valid
+                            if (table_count < 100) {  // Protecție împotriva overflow-ului
+                                strcpy(tables[table_count], table_name);
+                                table_count++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            closedir(dir);
+            
+            // Afișează rezultatele
+            if (table_count == 0) {
+                printf("No tables found in current database.\n");
+            } else {
+                // Găsește lungimea maximă pentru formatare
+                int max_length = strlen("Table");
+                for (int i = 0; i < table_count; i++) {
+                    int len = strlen(tables[i]);
+                    if (len > max_length) {
+                        max_length = len;
+                    }
+                }
+                
+                // Afișează header-ul tabelului
+                printf("+");
+                for (int i = 0; i < max_length + 2; i++) printf("-");
+                printf("+\n");
+                
+                printf("| %-*s |\n", max_length, "Table");
+                
+                printf("+");
+                for (int i = 0; i < max_length + 2; i++) printf("-");
+                printf("+\n");
+                
+                // Afișează tabelele
+                for (int i = 0; i < table_count; i++) {
+                    printf("| %-*s |\n", max_length, tables[i]);
+                }
+                
+                printf("+");
+                for (int i = 0; i < max_length + 2; i++) printf("-");
+                printf("+\n");
+                
+                printf("\n%d table(s) found.\n", table_count);
+                
+                // Afișează baza de date curentă
+                char *current_db = strrchr(DB_FILENAME, '/');
+                if (current_db) {
+                    current_db++; // Sări peste '/'
+                    printf("Current database: %s\n", current_db);
+                }
+            }
+            
+            printf("\n");
+            break;
+        }
+        case STATEMENT_DESC_TB: {
+            if (strcmp(DB_FILENAME, "../databases") == 0 || strcmp(DB_FILENAME, "../databases/") == 0) {
+                printf("Error: No database selected. Use 'USE DATABASE db_name' first.\n");
+                break;
+            }
+            
+            // Construiește calea pentru fișierul tabelului
+            char dbfilepath[256] = {0};
+            strcpy(dbfilepath, DB_FILENAME);
+            strcat(dbfilepath, "/btree");
+            strcat(dbfilepath, stmt->descTbStmt.table);
+            strcat(dbfilepath, ".bin");
+            
+            // Verifică dacă tabelul există
+            if (access(dbfilepath, F_OK) != 0) {
+                printf("Error: Table '%s' does not exist in current database.\n", stmt->descTbStmt.table);
+                break;
+            }
+            
+            // Inițializează baza de date pentru a încărca metadata
+            database_init(stmt->descTbStmt.table);
+            if (!metadata) {
+                printf("Error: Failed to load table metadata for '%s'\n", stmt->descTbStmt.table);
+                break;
+            }
+            
+            // Deserializează metadata
+            deserialize_metadata(db, metadata);
+            
+            // Verifică dacă numele tabelului corespunde
+            if (strcmp(metadata->table_name, stmt->descTbStmt.table) != 0) {
+                printf("Error: Table metadata mismatch for '%s'\n", stmt->descTbStmt.table);
+                break;
+            }
+            
+            printf("\nTable: %s\n", metadata->table_name);
+            printf("Database: %s\n", strrchr(DB_FILENAME, '/') + 1);
+            
+            // Calculează lungimile maxime pentru formatare
+            int max_field_len = strlen("Field");
+            int max_type_len = strlen("Type");
+            int max_constraint_len = strlen("Constraint");
+            
+            for (uint32_t i = 0; i < metadata->num_columns; i++) {
+                int field_len = strlen(metadata->column_names[i]);
+                if (field_len > max_field_len) {
+                    max_field_len = field_len;
+                }
+                
+                // Calculează lungimea tipului cu dimensiunea
+                char type_str[64];
+                switch (metadata->column_types[i]) {
+                    case TYPE_INT:
+                        strcpy(type_str, "INT");
+                        break;
+                    case TYPE_FLOAT:
+                        strcpy(type_str, "FLOAT");
+                        break;
+                    case TYPE_VARCHAR:
+                        snprintf(type_str, sizeof(type_str), "VARCHAR(%u)", metadata->column_sizes[i]);
+                        break;
+                    case TYPE_TIMESTAMP:
+                        strcpy(type_str, "TIMESTAMP");
+                        break;
+                    default:
+                        strcpy(type_str, "UNKNOWN");
+                        break;
+                }
+                
+                int type_len = strlen(type_str);
+                if (type_len > max_type_len) {
+                    max_type_len = type_len;
+                }
+                
+                // Calculează lungimea constrângerii
+                char constraint_str[32];
+                switch (metadata->column_constraints[i]) {
+                    case CONSTRAINT_NONE:
+                        strcpy(constraint_str, "NONE");
+                        break;
+                    case CONSTRAINT_NOT_NULL:
+                        strcpy(constraint_str, "NOT NULL");
+                        break;
+                    case CONSTRAINT_UNIQUE:
+                        strcpy(constraint_str, "UNIQUE");
+                        break;
+                    case CONSTRAINT_PRIMARY_KEY:
+                        strcpy(constraint_str, "PRIMARY KEY");
+                        break;
+                    case CONSTRAINT_FOREIGN_KEY:
+                        strcpy(constraint_str, "FOREIGN KEY");
+                        break;
+                    default:
+                        strcpy(constraint_str, "UNKNOWN");
+                        break;
+                }
+                
+                int constraint_len = strlen(constraint_str);
+                if (constraint_len > max_constraint_len) {
+                    max_constraint_len = constraint_len;
+                }
+            }
+            
+            // Afișează header-ul tabelului
+            printf("\n+");
+            for (int i = 0; i < max_field_len + 2; i++) printf("-");
+            printf("+");
+            for (int i = 0; i < max_type_len + 2; i++) printf("-");
+            printf("+");
+            for (int i = 0; i < max_constraint_len + 2; i++) printf("-");
+            printf("+\n");
+            
+            printf("| %-*s | %-*s | %-*s |\n", 
+                max_field_len, "Field", 
+                max_type_len, "Type", 
+                max_constraint_len, "Constraint");
+            
+            printf("+");
+            for (int i = 0; i < max_field_len + 2; i++) printf("-");
+            printf("+");
+            for (int i = 0; i < max_type_len + 2; i++) printf("-");
+            printf("+");
+            for (int i = 0; i < max_constraint_len + 2; i++) printf("-");
+            printf("+\n");
+            
+            // Afișează informațiile pentru fiecare coloană
+            for (uint32_t i = 0; i < metadata->num_columns; i++) {
+                // Construiește string-ul pentru tip
+                char type_str[64];
+                switch (metadata->column_types[i]) {
+                    case TYPE_INT:
+                        strcpy(type_str, "INT");
+                        break;
+                    case TYPE_FLOAT:
+                        strcpy(type_str, "FLOAT");
+                        break;
+                    case TYPE_VARCHAR:
+                        snprintf(type_str, sizeof(type_str), "VARCHAR(%u)", metadata->column_sizes[i]);
+                        break;
+                    case TYPE_TIMESTAMP:
+                        strcpy(type_str, "TIMESTAMP");
+                        break;
+                    default:
+                        strcpy(type_str, "UNKNOWN");
+                        break;
+                }
+                
+                // Construiește string-ul pentru constrângere
+                char constraint_str[32];
+                switch (metadata->column_constraints[i]) {
+                    case CONSTRAINT_NONE:
+                        strcpy(constraint_str, "NONE");
+                        break;
+                    case CONSTRAINT_NOT_NULL:
+                        strcpy(constraint_str, "NOT NULL");
+                        break;
+                    case CONSTRAINT_UNIQUE:
+                        strcpy(constraint_str, "UNIQUE");
+                        break;
+                    case CONSTRAINT_PRIMARY_KEY:
+                        strcpy(constraint_str, "PRIMARY KEY");
+                        break;
+                    case CONSTRAINT_FOREIGN_KEY:
+                        strcpy(constraint_str, "FOREIGN KEY");
+                        break;
+                    default:
+                        strcpy(constraint_str, "UNKNOWN");
+                        break;
+                }
+                
+                printf("| %-*s | %-*s | %-*s |\n", 
+                    max_field_len, metadata->column_names[i],
+                    max_type_len, type_str,
+                    max_constraint_len, constraint_str);
+            }
+            
+            // Afișează footer-ul tabelului
+            printf("+");
+            for (int i = 0; i < max_field_len + 2; i++) printf("-");
+            printf("+");
+            for (int i = 0; i < max_type_len + 2; i++) printf("-");
+            printf("+");
+            for (int i = 0; i < max_constraint_len + 2; i++) printf("-");
+            printf("+\n");
+            
+            printf("\n");
+            break;
+        }
         default: break;
     }
 }

@@ -1,0 +1,2 @@
+use database testdb1;
+describe table testTable;

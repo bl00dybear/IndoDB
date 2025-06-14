@@ -125,3 +125,6 @@ output/
 
 ./build
 /build
+
+/backup
+/E2E/__pycache__
