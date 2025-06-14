@@ -1,0 +1,3 @@
+use database testdb1;
+create table testTable (id INT);
+show tables;

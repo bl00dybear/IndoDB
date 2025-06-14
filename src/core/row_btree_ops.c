@@ -854,7 +854,7 @@ void delete_value(struct RowNode *node, const uint64_t key) {
                 root = NULL;
                 return;
             }
-            printf("Value %lu deleted from the treee\n", key);
+            // printf("Value %lu deleted from the treee\n", key);
             return;
         } 
         // Case 2: If a node is an internal node
@@ -907,9 +907,9 @@ void delete_value_from_tree(const uint64_t val) {
         printf("Tree is empty\n");
         return;
     }
-    printf("se apeleaza\n\n");
+    // printf("se apeleaza\n\n");
     delete_value(root, val);
-    printf("Value %d deleted from the tree\n", val);
+    // printf("Value %d deleted from the tree\n", val);
     // If the root has only one child left, make that child the new root
     if(root!=NULL)
     if (root->num_keys == 0 && !root->is_leaf) {

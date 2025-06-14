@@ -1,0 +1,11 @@
+Transaction started
+Database changed to 'test_transaction03'
+Table transaction_table03 created successfully!
++----------------------+----------------------+
+| id                   | text_test            |
++----------------------+----------------------+
+| 1                    | Test 1               |
++----------------------+----------------------+
+| 2                    | Test 2               |
++----------------------+----------------------+
+Transaction rolled back

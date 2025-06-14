@@ -1,0 +1,23 @@
+Error: No transaction started
+Error: No transaction started
+Transaction started
+Error: Transaction already started
+Transaction rolled back
+Database changed to 'test_transaction04'
+Table transaction_table04 created successfully!
++----------------------+----------------------+----------------------+
+| id                   | nume                 | varsta               |
++----------------------+----------------------+----------------------+
+| 1                    | Alice                | 30                   |
++----------------------+----------------------+----------------------+
+| 2                    | Bob                  | 25                   |
++----------------------+----------------------+----------------------+
+Error: No transaction started
++----------------------+----------------------+----------------------+
+| id                   | nume                 | varsta               |
++----------------------+----------------------+----------------------+
+| 1                    | Alice                | 30                   |
++----------------------+----------------------+----------------------+
+| 2                    | Bob                  | 25                   |
++----------------------+----------------------+----------------------+
+Database 'test_transaction04' dropped successfully!

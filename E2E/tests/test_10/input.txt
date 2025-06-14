@@ -1,0 +1,8 @@
+create database db04;
+use database db04;
+create table table03 (id int primary key, name varchar(50), age int, city varchar(50));
+insert into table03 values (1, 'Ana', 25, 'Cluj');
+insert into table03 values (2, 'Darius', 30, 'Iasi');
+insert into table03 values (3, 'Elena', 22, 'Bucuresti');
+insert into table03 values (4, 'Florin', 35, 'Timisoara');
+select name, city from table03 where age <= 30 and age > 22;

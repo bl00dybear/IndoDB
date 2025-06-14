@@ -1,0 +1,10 @@
+Database changed to 'testdb1'
+Table testTable created successfully!
+Tables in database:
++-----------+
+| Table     |
++-----------+
+| testTable |
++-----------+
+1 table(s) found.
+Current database: testdb1

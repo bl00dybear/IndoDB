@@ -1,0 +1,7 @@
+create database db02;
+use database db02;
+create table table02 (id int primary key , name varchar(50));
+insert into table02 values (1, 'Alice');
+insert into table02 values (2, 'Bogdan');
+insert into table02 values (2, 'Bob');
+drop database db02;
