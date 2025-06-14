@@ -1,9 +1,64 @@
+show databases;
+
+No databases found.
+
+create database testdb;
+show databases;
+
++----------+
+| Database |
++----------+
+| testdb   |
++----------+
+1 database(s) found.
+
+drop database testdb;
+
+Database 'testdb' dropped successfully!
+
+create database testdb1;
+use database testdb1;
+show tables;
+
+Database changed to 'testdb1'
+Tables in database:
+No tables found in current database.
+
+use database testdb1;
+create table testTable (id INT);
+show tables;
+
+Database changed to 'testdb1'
+Table testTable created successfully!
+Tables in database:
++-----------+
+| Table     |
++-----------+
+| testTable |
++-----------+
+1 table(s) found.
+Current database: testdb1
+
+use database testdb1;
+describe table testTable;
+
+Database changed to 'testdb1'
+Table: testTable
+Database: testdb1
++-------+------+------------+
+| Field | Type | Constraint |
++-------+------+------------+
+| id    | INT  | NONE       |
++-------+------+------------+
+
+
 create database db00;
 use database db00;
 create table table00 (id int, name varchar(50));
 insert into table00 values (1, 'Alice');
 insert into table00 values (2, 'Bob');
 select * from table00;
+drop database db00;
 
 Database changed to 'db00'
 Table table00 created successfully!
@@ -14,5 +69,652 @@ Table table00 created successfully!
 +----------------------+----------------------+
 | 2                    | Bob                  |
 +----------------------+----------------------+
+Database 'db00' dropped successfully!
+
+create database db01;
+use database db01;
+create table table00 (id int, name varchar(50));
+insert into table00 values (1, 'Alice');
+insert into table00 values (2, 'Bob');
+select * from table00;
+drop database db01;
 
 
+Database changed to 'db01'
+Table table00 created successfully!
++----------------------+----------------------+
+| id                   | name                 |
++----------------------+----------------------+
+| 1                    | Alice                |
++----------------------+----------------------+
+| 2                    | Bob                  |
++----------------------+----------------------+
+Database 'db01' dropped successfully!
+
+
+create database db02;
+use database db02;
+create table table02 (id int primary key , name varchar(50));
+insert into table02 values (1, 'Alice');
+insert into table02 values (2, 'Bogdan');
+insert into table02 values (2, 'Bob');
+drop database db02;
+
+Database changed to 'db02'
+Table table02 created successfully!
+Error: PK 'id' must be unique
+        Error: Constraints not met
+Database 'db02' dropped successfully!
+
+create database db03;
+use database db03;
+create table table02 (id int primary key , name varchar(50));
+insert into table02 values (1, 'Alice');
+insert into table02 values (2, 'Bogdan');
+insert into table02 values (3, 'Cristi');
+select name from table02 where id=2;
+
+Database changed to 'db03'
+Table table02 created successfully!
++----------------------+
+| name                 |
++----------------------+
+| Bogdan               |
++----------------------+
+
+create database db04;
+use database db04;
+create table table03 (id int primary key, name varchar(50), age int, city varchar(50));
+insert into table03 values (1, 'Ana', 25, 'Cluj');
+insert into table03 values (2, 'Darius', 30, 'Iasi');
+insert into table03 values (3, 'Elena', 22, 'Bucuresti');
+insert into table03 values (4, 'Florin', 35, 'Timisoara');
+select name, city from table03 where age <= 30 and age > 22;
+
+Database changed to 'db04'
+Table table03 created successfully!
++----------------------+----------------------+
+| name                 | city                 |
++----------------------+----------------------+
+| Ana                  | Cluj                 |
++----------------------+----------------------+
+| Darius               | Iasi                 |
++----------------------+----------------------+
+
+create database db05;
+use database db05;
+create table employees (id int primary key, name varchar(50), age int, salary int);
+insert into employees values (1, 'Ioana', 28, 4000);
+insert into employees values (2, 'Mihai', 35, 5200);
+insert into employees values (3, 'Andrei', 30, 4800);
+insert into employees values (4, 'Sorina', 42, 6100);
+insert into employees values (5, 'Laura', 29, 4500);
+update employees set salary=5000 where age > 28 and age <= 35;
+select id, name, age, salary from employees;
+
+Database changed to 'db05'
+Table employees created successfully!
+Updateing rows from table 'employees' where condition is met...
++----------------------+----------------------+----------------------+----------------------+
+| id                   | name                 | age                  | salary               |
++----------------------+----------------------+----------------------+----------------------+
+| 1                    | Ioana                | 28                   | 4000                 |
++----------------------+----------------------+----------------------+----------------------+
+| 4                    | Sorina               | 42                   | 6100                 |
++----------------------+----------------------+----------------------+----------------------+
+| 2                    | Mihai                | 35                   | 5000                 |
++----------------------+----------------------+----------------------+----------------------+
+| 3                    | Andrei               | 30                   | 5000                 |
++----------------------+----------------------+----------------------+----------------------+
+| 5                    | Laura                | 29                   | 5000                 |
++----------------------+----------------------+----------------------+----------------------+
+
+create database db07;
+use database db07;
+create table table05 (id int primary key, name varchar(50), age int, city varchar(50));
+insert into table05 values (1, 'Radu', 28, 'Oradea');
+insert into table05 values (2, 'Irina', 31, 'Cluj');
+insert into table05 values (3, 'George', 30, 'Sibiu');
+insert into table05 values (4, 'Vlad', 35, 'Iasi');
+insert into table05 values (5, 'Mara', 26, 'Brasov');
+delete from table05 where age >= 30 and id < 5;
+select id, name, age, city from table05;
+
+Database changed to 'db07'
+Table table05 created successfully!
+Deleting rows from table 'table05' where condition is met...
++----------------------+----------------------+----------------------+----------------------+
+| id                   | name                 | age                  | city                 |
++----------------------+----------------------+----------------------+----------------------+
+| 1                    | Radu                 | 28                   | Oradea               |
++----------------------+----------------------+----------------------+----------------------+
+| 5                    | Mara                 | 26                   | Brasov               |
++----------------------+----------------------+----------------------+----------------------+
+
+create database db08;
+use database db08;
+create table table06 (id int primary key, name varchar(50), age int, salary int);
+insert into table06 values (1, 'Alex', 25, 4000);
+insert into table06 values (2, 'Bianca', 30, 4500);
+insert into table06 values (3, 'Cornel', 35, 4800);
+insert into table06 values (4, 'Diana', 28, 4200);
+insert into table06 values (5, 'Eugen', 40, 5000);
+insert into table06 values (6, 'Felicia', 22, 3900);
+update table06 set salary = 4600 where age >= 28 and age < 35;
+delete from table06 where age <= 25 or id > 5;
+select id, name, age, salary from table06;
+
+Database changed to 'db08'
+Table table06 created successfully!
+Updateing rows from table 'table06' where condition is met...
+Deleting rows from table 'table06' where condition is met...
++----------------------+----------------------+----------------------+----------------------+
+| id                   | name                 | age                  | salary               |
++----------------------+----------------------+----------------------+----------------------+
+| 3                    | Cornel               | 35                   | 4800                 |
++----------------------+----------------------+----------------------+----------------------+
+| 5                    | Eugen                | 40                   | 5000                 |
++----------------------+----------------------+----------------------+----------------------+
+| 2                    | Bianca               | 30                   | 4600                 |
++----------------------+----------------------+----------------------+----------------------+
+| 4                    | Diana                | 28                   | 4600                 |
++----------------------+----------------------+----------------------+----------------------+
+
+create database db10;
+use database db10;
+create table table07 (id int primary key, name varchar(50), age int, salary int);
+insert into table07 values (1, 'Pers1', 21, 3013);
+insert into table07 values (2, 'Pers2', 22, 3026);
+insert into table07 values (3, 'Pers3', 23, 3039);
+insert into table07 values (4, 'Pers4', 24, 3052);
+insert into table07 values (5, 'Pers5', 25, 3065);
+insert into table07 values (6, 'Pers6', 26, 3078);
+insert into table07 values (7, 'Pers7', 27, 3091);
+insert into table07 values (8, 'Pers8', 28, 3104);
+insert into table07 values (9, 'Pers9', 29, 3117);
+insert into table07 values (10, 'Pers10', 30, 3130);
+insert into table07 values (11, 'Pers11', 31, 3143);
+insert into table07 values (12, 'Pers12', 32, 3156);
+insert into table07 values (13, 'Pers13', 33, 3169);
+insert into table07 values (14, 'Pers14', 34, 3182);
+insert into table07 values (15, 'Pers15', 35, 3195);
+insert into table07 values (16, 'Pers16', 36, 3208);
+insert into table07 values (17, 'Pers17', 37, 3221);
+insert into table07 values (18, 'Pers18', 38, 3234);
+insert into table07 values (19, 'Pers19', 39, 3247);
+insert into table07 values (20, 'Pers20', 40, 3260);
+insert into table07 values (21, 'Pers21', 41, 3273);
+insert into table07 values (22, 'Pers22', 42, 3286);
+insert into table07 values (23, 'Pers23', 43, 3299);
+insert into table07 values (24, 'Pers24', 44, 3312);
+insert into table07 values (25, 'Pers25', 45, 3325);
+insert into table07 values (26, 'Pers26', 20, 3338);
+insert into table07 values (27, 'Pers27', 21, 3351);
+insert into table07 values (28, 'Pers28', 22, 3364);
+insert into table07 values (29, 'Pers29', 23, 3377);
+insert into table07 values (30, 'Pers30', 24, 3390);
+insert into table07 values (31, 'Pers31', 25, 3403);
+insert into table07 values (32, 'Pers32', 26, 3416);
+insert into table07 values (33, 'Pers33', 27, 3429);
+insert into table07 values (34, 'Pers34', 28, 3442);
+insert into table07 values (35, 'Pers35', 29, 3455);
+insert into table07 values (36, 'Pers36', 30, 3468);
+insert into table07 values (37, 'Pers37', 31, 3481);
+insert into table07 values (38, 'Pers38', 32, 3494);
+insert into table07 values (39, 'Pers39', 33, 3507);
+insert into table07 values (40, 'Pers40', 34, 3520);
+insert into table07 values (41, 'Pers41', 35, 3533);
+insert into table07 values (42, 'Pers42', 36, 3546);
+insert into table07 values (43, 'Pers43', 37, 3559);
+insert into table07 values (44, 'Pers44', 38, 3572);
+insert into table07 values (45, 'Pers45', 39, 3585);
+insert into table07 values (46, 'Pers46', 40, 3598);
+insert into table07 values (47, 'Pers47', 41, 3611);
+insert into table07 values (48, 'Pers48', 42, 3624);
+insert into table07 values (49, 'Pers49', 43, 3637);
+insert into table07 values (50, 'Pers50', 44, 3650);
+insert into table07 values (51, 'Pers51', 45, 3663);
+insert into table07 values (52, 'Pers52', 20, 3676);
+insert into table07 values (53, 'Pers53', 21, 3689);
+insert into table07 values (54, 'Pers54', 22, 3702);
+insert into table07 values (55, 'Pers55', 23, 3715);
+insert into table07 values (56, 'Pers56', 24, 3728);
+insert into table07 values (57, 'Pers57', 25, 3741);
+insert into table07 values (58, 'Pers58', 26, 3754);
+insert into table07 values (59, 'Pers59', 27, 3767);
+insert into table07 values (60, 'Pers60', 28, 3780);
+insert into table07 values (61, 'Pers61', 29, 3793);
+insert into table07 values (62, 'Pers62', 30, 3806);
+insert into table07 values (63, 'Pers63', 31, 3819);
+insert into table07 values (64, 'Pers64', 32, 3832);
+insert into table07 values (65, 'Pers65', 33, 3845);
+insert into table07 values (66, 'Pers66', 34, 3858);
+insert into table07 values (67, 'Pers67', 35, 3871);
+insert into table07 values (68, 'Pers68', 36, 3884);
+insert into table07 values (69, 'Pers69', 37, 3897);
+insert into table07 values (70, 'Pers70', 38, 3910);
+insert into table07 values (71, 'Pers71', 39, 3923);
+insert into table07 values (72, 'Pers72', 40, 3936);
+insert into table07 values (73, 'Pers73', 41, 3949);
+insert into table07 values (74, 'Pers74', 42, 3962);
+insert into table07 values (75, 'Pers75', 43, 3975);
+insert into table07 values (76, 'Pers76', 44, 3988);
+insert into table07 values (77, 'Pers77', 45, 4001);
+insert into table07 values (78, 'Pers78', 20, 4014);
+insert into table07 values (79, 'Pers79', 21, 4027);
+insert into table07 values (80, 'Pers80', 22, 4040);
+insert into table07 values (81, 'Pers81', 23, 4053);
+insert into table07 values (82, 'Pers82', 24, 4066);
+insert into table07 values (83, 'Pers83', 25, 4079);
+insert into table07 values (84, 'Pers84', 26, 4092);
+insert into table07 values (85, 'Pers85', 27, 4105);
+insert into table07 values (86, 'Pers86', 28, 4118);
+insert into table07 values (87, 'Pers87', 29, 4131);
+insert into table07 values (88, 'Pers88', 30, 4144);
+insert into table07 values (89, 'Pers89', 31, 4157);
+insert into table07 values (90, 'Pers90', 32, 4170);
+insert into table07 values (91, 'Pers91', 33, 4183);
+insert into table07 values (92, 'Pers92', 34, 4196);
+insert into table07 values (93, 'Pers93', 35, 4209);
+insert into table07 values (94, 'Pers94', 36, 4222);
+insert into table07 values (95, 'Pers95', 37, 4235);
+insert into table07 values (96, 'Pers96', 38, 4248);
+insert into table07 values (97, 'Pers97', 39, 4261);
+insert into table07 values (98, 'Pers98', 40, 4274);
+insert into table07 values (99, 'Pers99', 41, 4287);
+insert into table07 values (100, 'Pers100', 42, 4300);
+insert into table07 values (101, 'Pers101', 43, 4313);
+insert into table07 values (102, 'Pers102', 44, 4326);
+insert into table07 values (103, 'Pers103', 45, 4339);
+insert into table07 values (104, 'Pers104', 20, 4352);
+insert into table07 values (105, 'Pers105', 21, 4365);
+insert into table07 values (106, 'Pers106', 22, 4378);
+insert into table07 values (107, 'Pers107', 23, 4391);
+insert into table07 values (108, 'Pers108', 24, 4404);
+insert into table07 values (109, 'Pers109', 25, 4417);
+insert into table07 values (110, 'Pers110', 26, 4430);
+insert into table07 values (111, 'Pers111', 27, 4443);
+insert into table07 values (112, 'Pers112', 28, 4456);
+insert into table07 values (113, 'Pers113', 29, 4469);
+insert into table07 values (114, 'Pers114', 30, 4482);
+insert into table07 values (115, 'Pers115', 31, 4495);
+insert into table07 values (116, 'Pers116', 32, 4508);
+insert into table07 values (117, 'Pers117', 33, 4521);
+insert into table07 values (118, 'Pers118', 34, 4534);
+insert into table07 values (119, 'Pers119', 35, 4547);
+insert into table07 values (120, 'Pers120', 36, 4560);
+insert into table07 values (121, 'Pers121', 37, 4573);
+insert into table07 values (122, 'Pers122', 38, 4586);
+insert into table07 values (123, 'Pers123', 39, 4599);
+insert into table07 values (124, 'Pers124', 40, 4612);
+insert into table07 values (125, 'Pers125', 41, 4625);
+insert into table07 values (126, 'Pers126', 42, 4638);
+insert into table07 values (127, 'Pers127', 43, 4651);
+insert into table07 values (128, 'Pers128', 44, 4664);
+insert into table07 values (129, 'Pers129', 45, 4677);
+insert into table07 values (130, 'Pers130', 20, 4690);
+insert into table07 values (131, 'Pers131', 21, 4703);
+insert into table07 values (132, 'Pers132', 22, 4716);
+insert into table07 values (133, 'Pers133', 23, 4729);
+insert into table07 values (134, 'Pers134', 24, 4742);
+insert into table07 values (135, 'Pers135', 25, 4755);
+insert into table07 values (136, 'Pers136', 26, 4768);
+insert into table07 values (137, 'Pers137', 27, 4781);
+insert into table07 values (138, 'Pers138', 28, 4794);
+insert into table07 values (139, 'Pers139', 29, 4807);
+insert into table07 values (140, 'Pers140', 30, 4820);
+insert into table07 values (141, 'Pers141', 31, 4833);
+insert into table07 values (142, 'Pers142', 32, 4846);
+insert into table07 values (143, 'Pers143', 33, 4859);
+insert into table07 values (144, 'Pers144', 34, 4872);
+insert into table07 values (145, 'Pers145', 35, 4885);
+insert into table07 values (146, 'Pers146', 36, 4898);
+insert into table07 values (147, 'Pers147', 37, 4911);
+insert into table07 values (148, 'Pers148', 38, 4924);
+insert into table07 values (149, 'Pers149', 39, 4937);
+insert into table07 values (150, 'Pers150', 40, 4950);
+insert into table07 values (151, 'Pers151', 41, 4963);
+insert into table07 values (152, 'Pers152', 42, 4976);
+insert into table07 values (153, 'Pers153', 43, 4989);
+insert into table07 values (154, 'Pers154', 44, 5002);
+insert into table07 values (155, 'Pers155', 45, 5015);
+insert into table07 values (156, 'Pers156', 20, 5028);
+insert into table07 values (157, 'Pers157', 21, 5041);
+insert into table07 values (158, 'Pers158', 22, 5054);
+insert into table07 values (159, 'Pers159', 23, 5067);
+insert into table07 values (160, 'Pers160', 24, 5080);
+insert into table07 values (161, 'Pers161', 25, 5093);
+insert into table07 values (162, 'Pers162', 26, 5106);
+insert into table07 values (163, 'Pers163', 27, 5119);
+insert into table07 values (164, 'Pers164', 28, 5132);
+insert into table07 values (165, 'Pers165', 29, 5145);
+insert into table07 values (166, 'Pers166', 30, 5158);
+insert into table07 values (167, 'Pers167', 31, 5171);
+insert into table07 values (168, 'Pers168', 32, 5184);
+insert into table07 values (169, 'Pers169', 33, 5197);
+insert into table07 values (170, 'Pers170', 34, 5210);
+insert into table07 values (171, 'Pers171', 35, 5223);
+insert into table07 values (172, 'Pers172', 36, 5236);
+insert into table07 values (173, 'Pers173', 37, 5249);
+insert into table07 values (174, 'Pers174', 38, 5262);
+insert into table07 values (175, 'Pers175', 39, 5275);
+insert into table07 values (176, 'Pers176', 40, 5288);
+insert into table07 values (177, 'Pers177', 41, 5301);
+insert into table07 values (178, 'Pers178', 42, 5314);
+insert into table07 values (179, 'Pers179', 43, 5327);
+insert into table07 values (180, 'Pers180', 44, 5340);
+insert into table07 values (181, 'Pers181', 45, 5353);
+insert into table07 values (182, 'Pers182', 20, 5366);
+insert into table07 values (183, 'Pers183', 21, 5379);
+insert into table07 values (184, 'Pers184', 22, 5392);
+insert into table07 values (185, 'Pers185', 23, 5405);
+insert into table07 values (186, 'Pers186', 24, 5418);
+insert into table07 values (187, 'Pers187', 25, 5431);
+insert into table07 values (188, 'Pers188', 26, 5444);
+insert into table07 values (189, 'Pers189', 27, 5457);
+insert into table07 values (190, 'Pers190', 28, 5470);
+insert into table07 values (191, 'Pers191', 29, 5483);
+insert into table07 values (192, 'Pers192', 30, 5496);
+insert into table07 values (193, 'Pers193', 31, 3009);
+insert into table07 values (194, 'Pers194', 32, 3022);
+insert into table07 values (195, 'Pers195', 33, 3035);
+insert into table07 values (196, 'Pers196', 34, 3048);
+insert into table07 values (197, 'Pers197', 35, 3061);
+insert into table07 values (198, 'Pers198', 36, 3074);
+insert into table07 values (199, 'Pers199', 37, 3087);
+insert into table07 values (200, 'Pers200', 38, 3100);
+update table07 set salary = 5000 where age >= 30 and age <= 35 and id <= 150;
+delete from table07 where age < 25 or salary < 3300;
+select id, name, age, salary from table07;
+
+Database changed to 'db10'
+Table table07 created successfully!
+Updateing rows from table 'table07' where condition is met...
+Deleting rows from table 'table07' where condition is met...
++----------------------+----------------------+----------------------+----------------------+
+| id                   | name                 | age                  | salary               |
++----------------------+----------------------+----------------------+----------------------+
+| 170                  | Pers170              | 34                   | 5210                 |
++----------------------+----------------------+----------------------+----------------------+
+| 171                  | Pers171              | 35                   | 5223                 |
++----------------------+----------------------+----------------------+----------------------+
+| 172                  | Pers172              | 36                   | 5236                 |
++----------------------+----------------------+----------------------+----------------------+
+| 173                  | Pers173              | 37                   | 5249                 |
++----------------------+----------------------+----------------------+----------------------+
+| 174                  | Pers174              | 38                   | 5262                 |
++----------------------+----------------------+----------------------+----------------------+
+| 175                  | Pers175              | 39                   | 5275                 |
++----------------------+----------------------+----------------------+----------------------+
+| 176                  | Pers176              | 40                   | 5288                 |
++----------------------+----------------------+----------------------+----------------------+
+| 177                  | Pers177              | 41                   | 5301                 |
++----------------------+----------------------+----------------------+----------------------+
+| 178                  | Pers178              | 42                   | 5314                 |
++----------------------+----------------------+----------------------+----------------------+
+| 179                  | Pers179              | 43                   | 5327                 |
++----------------------+----------------------+----------------------+----------------------+
+| 180                  | Pers180              | 44                   | 5340                 |
++----------------------+----------------------+----------------------+----------------------+
+| 181                  | Pers181              | 45                   | 5353                 |
++----------------------+----------------------+----------------------+----------------------+
+| 187                  | Pers187              | 25                   | 5431                 |
++----------------------+----------------------+----------------------+----------------------+
+| 188                  | Pers188              | 26                   | 5444                 |
++----------------------+----------------------+----------------------+----------------------+
+| 189                  | Pers189              | 27                   | 5457                 |
++----------------------+----------------------+----------------------+----------------------+
+| 190                  | Pers190              | 28                   | 5470                 |
++----------------------+----------------------+----------------------+----------------------+
+| 191                  | Pers191              | 29                   | 5483                 |
++----------------------+----------------------+----------------------+----------------------+
+| 192                  | Pers192              | 30                   | 5496                 |
++----------------------+----------------------+----------------------+----------------------+
+
+create database test_transaction00;
+use database test_transaction00;
+start transaction;
+create table transaction_table00 (id int, value int);
+insert into transaction_table00 values (1, 100);
+insert into transaction_table00 values (2, 200);
+commit;
+start transaction;
+insert into transaction_table00 values (3, 300);
+insert into transaction_table00 values (4, 400);
+select * from transaction_table00;
+rollback;
+select * from transaction_table00;
+drop database test_transaction00;
+
+Database changed to 'test_transaction00'
+Transaction started
+Table transaction_table00 created successfully!
+Transaction committed
+Transaction started
++----------------------+----------------------+
+| id                   | value                |
++----------------------+----------------------+
+| 1                    | 100                  |
++----------------------+----------------------+
+| 2                    | 200                  |
++----------------------+----------------------+
+| 3                    | 300                  |
++----------------------+----------------------+
+| 4                    | 400                  |
++----------------------+----------------------+
+Transaction rolled back
++----------------------+----------------------+
+| id                   | value                |
++----------------------+----------------------+
+| 1                    | 100                  |
++----------------------+----------------------+
+| 2                    | 200                  |
++----------------------+----------------------+
+Database 'test_transaction00' dropped successfully!
+
+
+create database test_transaction01;
+use database test_transaction01;
+start transaction;
+create table transaction_table01 (id int, value int);
+insert into transaction_table01 values (1, 100);
+insert into transaction_table01 values (2, 200);
+select * from transaction_table01 where id = 1;
+rollback;
+select * from transaction_table01;
+drop database test_transaction01;
+
+Database changed to 'test_transaction01'
+Transaction started
+Table transaction_table01 created successfully!
++----------------------+----------------------+
+| id                   | value                |
++----------------------+----------------------+
+| 1                    | 100                  |
++----------------------+----------------------+
+Transaction rolled back
+Database 'test_transaction01' dropped successfully!
+
+create database test_transaction02;
+use database test_transaction02;
+create table transaction_table02 (id int, value int);
+insert into transaction_table02 values (1, 100);
+start transaction;
+insert into transaction_table02 values (2, 200);
+insert into transaction_table02 values (3, 300);
+select * from transaction_table02;
+drop table transaction_table02;
+rollback;
+select * from transaction_table02;
+drop database test_transaction02;
+
+Database changed to 'test_transaction02'
+Table transaction_table02 created successfully!
+Transaction started
++----------------------+----------------------+
+| id                   | value                |
++----------------------+----------------------+
+| 1                    | 100                  |
++----------------------+----------------------+
+| 2                    | 200                  |
++----------------------+----------------------+
+| 3                    | 300                  |
++----------------------+----------------------+
+Table 'transaction_table02' dropped successfully.
+Transaction rolled back
++----------------------+----------------------+
+| id                   | value                |
++----------------------+----------------------+
+| 1                    | 100                  |
++----------------------+----------------------+
+Database 'test_transaction02' dropped successfully!
+
+start transaction;
+create database test_transaction03;
+use database test_transaction03;
+create table transaction_table03 (id int, text_test varchar(100));
+insert into transaction_table03 values (1, 'Test 1');
+insert into transaction_table03 values (2, 'Test 2');
+select * from transaction_table03;
+rollback;
+select * from transaction_table03;
+
+Transaction started
+Database changed to 'test_transaction03'
+Table transaction_table03 created successfully!
++----------------------+----------------------+
+| id                   | text_test            |
++----------------------+----------------------+
+| 1                    | Test 1               |
++----------------------+----------------------+
+| 2                    | Test 2               |
++----------------------+----------------------+
+Transaction rolled back
+
+
+rollback;
+commit;
+start transaction;
+start transaction;
+rollback;
+create database test_transaction04;
+use database test_transaction04;
+create table transaction_table04 (id int, nume varchar(50), varsta int);
+insert into transaction_table04 values (1, 'Alice', 30);
+insert into transaction_table04 values (2, 'Bob', 25);
+select * from transaction_table04;
+rollback;
+select * from transaction_table04;
+drop database test_transaction04;
+
+Error: No transaction started
+Error: No transaction started
+Transaction started
+Error: Transaction already started
+Transaction rolled back
+Database changed to 'test_transaction04'
+Table transaction_table04 created successfully!
++----------------------+----------------------+----------------------+
+| id                   | nume                 | varsta               |
++----------------------+----------------------+----------------------+
+| 1                    | Alice                | 30                   |
++----------------------+----------------------+----------------------+
+| 2                    | Bob                  | 25                   |
++----------------------+----------------------+----------------------+
+Error: No transaction started
++----------------------+----------------------+----------------------+
+| id                   | nume                 | varsta               |
++----------------------+----------------------+----------------------+
+| 1                    | Alice                | 30                   |
++----------------------+----------------------+----------------------+
+| 2                    | Bob                  | 25                   |
++----------------------+----------------------+----------------------+
+Database 'test_transaction04' dropped successfully!
+
+create database test_complex;
+use database test_complex;
+create database complex_test_db;
+use database complex_test_db;
+create table employees (id int primary key, name varchar(30), age int, salary int, department varchar(25));
+insert into employees values (1, 'Alexandra Popescu', 28, 4500, 'IT');
+insert into employees values (2, 'Bogdan Ionescu', 35, 6200, 'Marketing');
+insert into employees values (3, 'Carmen Dumitrescu', 42, 7800, 'HR');
+insert into employees values (4, 'Daniel Georgescu', 29, 5100, 'IT');
+insert into employees values (5, 'Elena Constantinescu', 38, 6800, 'Finance');
+insert into employees values (6, 'Florin Mihailescu', 31, 5500, 'IT');
+insert into employees values (7, 'Gabriela Stanescu', 26, 4200, 'Marketing');
+insert into employees values (8, 'Horia Vladescu', 44, 8500, 'Management');
+insert into employees values (9, 'Ioana Nicolescu', 33, 5900, 'HR');
+insert into employees values (10, 'Julien Radu', 27, 4800, 'Finance');
+select * from employees;
+start transaction;
+insert into employees values (11, 'Kristina Marin', 30, 5300, 'IT');
+insert into employees values (12, 'Lucian Barbu', 36, 6500, 'Marketing');
+select id, name, salary from employees where age >= 30 and salary > 5000;
+update employees set salary=6000 where department='IT' and age >= 28 and age <= 35;
+update employees set salary=5500 where age > 35 and salary < 7000;
+select id, name, age, salary, department from employees where salary >= 5500;
+delete from employees where age < 30 and salary < 5000;
+delete from employees where age > 40 and salary > 7500;
+select * from employees;
+commit;
+select id, name, age, salary from employees where age >= 30;
+start transaction;
+insert into employees values (13, 'Test User', 25, 3000, 'Test');
+update employees set salary=9999 where id <= 5;
+select * from employees where salary > 8000;
+rollback;
+select * from employees;
+drop database complex_test_db;
+
+Database changed to 'complex_test_db'
+Table employees created successfully!
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| id                   | name                 | age                  | salary               | department           |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 1                    | Alexandra Popescu    | 28                   | 4500                 | IT                   |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 2                    | Bogdan Ionescu       | 35                   | 6200                 | Marketing            |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 3                    | Carmen Dumitrescu    | 42                   | 7800                 | HR                   |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 4                    | Daniel Georgescu     | 29                   | 5100                 | IT                   |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 5                    | Elena Constantinescu | 38                   | 6800                 | Finance              |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 6                    | Florin Mihailescu    | 31                   | 5500                 | IT                   |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 7                    | Gabriela Stanescu    | 26                   | 4200                 | Marketing            |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 8                    | Horia Vladescu       | 44                   | 8500                 | Management           |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 9                    | Ioana Nicolescu      | 33                   | 5900                 | HR                   |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+| 10                   | Julien Radu          | 27                   | 4800                 | Finance              |
++----------------------+----------------------+----------------------+----------------------+----------------------+
+Transaction started
++----------------------+----------------------+----------------------+
+| id                   | name                 | salary               |
++----------------------+----------------------+----------------------+
+| 2                    | Bogdan Ionescu       | 6200                 |
++----------------------+----------------------+----------------------+
+| 3                    | Carmen Dumitrescu    | 7800                 |
++----------------------+----------------------+----------------------+
+| 5                    | Elena Constantinescu | 6800                 |
++----------------------+----------------------+----------------------+
+| 6                    | Florin Mihailescu    | 5500                 |
++----------------------+----------------------+----------------------+
+| 8                    | Horia Vladescu       | 8500                 |
++----------------------+----------------------+----------------------+
+| 9                    | Ioana Nicolescu      | 5900                 |
++----------------------+----------------------+----------------------+
+| 11                   | Kristina Marin       | 5300                 |
++----------------------+----------------------+----------------------+
+| 12                   | Lucian Barbu         | 6500                 |
++----------------------+----------------------+----------------------+
+Updateing rows from table 'employees' where condition is met...
+Updateing rows from table 'employees' where condition is met...
+Deleting rows from table 'employees' where condition is met...
+Deleting rows from table 'employees' where condition is met...
+Transaction committed
+Database 'complex_test_db' dropped successfully!

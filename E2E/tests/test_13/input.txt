@@ -1,0 +1,12 @@
+create database db08;
+use database db08;
+create table table06 (id int primary key, name varchar(50), age int, salary int);
+insert into table06 values (1, 'Alex', 25, 4000);
+insert into table06 values (2, 'Bianca', 30, 4500);
+insert into table06 values (3, 'Cornel', 35, 4800);
+insert into table06 values (4, 'Diana', 28, 4200);
+insert into table06 values (5, 'Eugen', 40, 5000);
+insert into table06 values (6, 'Felicia', 22, 3900);
+update table06 set salary = 4600 where age >= 28 and age < 35;
+delete from table06 where age <= 25 or id > 5;
+select id, name, age, salary from table06;

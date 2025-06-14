@@ -39,7 +39,7 @@ def run_checks():
             failed.append(td)
     
     print("\nSummary:")
-    print(f" Trecut: {len(all_tests) - len(failed)}")
+    print(f" Passed: {len(all_tests) - len(failed)}")
     print(f" Failed: {len(failed)}")
     return failed
 

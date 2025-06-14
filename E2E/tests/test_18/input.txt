@@ -1,0 +1,9 @@
+start transaction;
+create database test_transaction03;
+use database test_transaction03;
+create table transaction_table03 (id int, text_test varchar(100));
+insert into transaction_table03 values (1, 'Test 1');
+insert into transaction_table03 values (2, 'Test 2');
+select * from transaction_table03;
+rollback;
+select * from transaction_table03;

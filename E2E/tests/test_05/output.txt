@@ -1,0 +1,11 @@
+Database changed to 'testdb1'
+
+Table: testTable
+Database: testdb1
+
++-------+------+------------+
+| Field | Type | Constraint |
++-------+------+------------+
+| id    | INT  | NONE       |
++-------+------+------------+
+

@@ -1,0 +1,12 @@
+create database test_transaction02;
+use database test_transaction02;
+create table transaction_table02 (id int, value int);
+insert into transaction_table02 values (1, 100);
+start transaction;
+insert into transaction_table02 values (2, 200);
+insert into transaction_table02 values (3, 300);
+select * from transaction_table02;
+drop table transaction_table02;
+rollback;
+select * from transaction_table02;
+drop database test_transaction02;

@@ -1,0 +1,14 @@
+rollback;
+commit;
+start transaction;
+start transaction;
+rollback;
+create database test_transaction04;
+use database test_transaction04;
+create table transaction_table04 (id int, nume varchar(50), varsta int);
+insert into transaction_table04 values (1, 'Alice', 30);
+insert into transaction_table04 values (2, 'Bob', 25);
+select * from transaction_table04;
+rollback;
+select * from transaction_table04;
+drop database test_transaction04;

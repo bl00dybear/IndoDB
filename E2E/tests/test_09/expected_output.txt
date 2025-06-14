@@ -1,0 +1,7 @@
+Database changed to 'db03'
+Table table02 created successfully!
++----------------------+
+| name                 |
++----------------------+
+| Bogdan               |
++----------------------+

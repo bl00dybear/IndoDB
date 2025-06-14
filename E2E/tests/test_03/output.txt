@@ -1,0 +1,5 @@
+Database changed to 'testdb1'
+
+Tables in database:
+No tables found in current database.
+

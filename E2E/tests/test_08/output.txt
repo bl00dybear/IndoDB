@@ -1,0 +1,5 @@
+Database changed to 'db02'
+Table table02 created successfully!
+Error: PK 'id' must be unique
+        Error: Constraints not met
+Database 'db02' dropped successfully!

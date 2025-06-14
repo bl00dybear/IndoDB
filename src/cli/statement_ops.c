@@ -1137,7 +1137,7 @@ void process_statement(Statement *stmt) {
             
             // Afișează rezultatele
             if (database_count == 0) {
-                printf("No databases found in '../databases' directory.\n");
+                printf("No databases found.\n");
             } else {
                 // Găsește lungimea maximă pentru formatare
                 int max_length = strlen("Database");
