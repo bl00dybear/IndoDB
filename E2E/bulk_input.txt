@@ -1,0 +1,18 @@
+create database db00;
+use database db00;
+create table table00 (id int, name varchar(50));
+insert into table00 values (1, 'Alice');
+insert into table00 values (2, 'Bob');
+select * from table00;
+
+Database changed to 'db00'
+Table table00 created successfully!
++----------------------+----------------------+
+| id                   | name                 |
++----------------------+----------------------+
+| 1                    | Alice                |
++----------------------+----------------------+
+| 2                    | Bob                  |
++----------------------+----------------------+
+
+
