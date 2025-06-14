@@ -127,4 +127,4 @@ output/
 /build
 
 /backup
-/E2E/__pycache__
+/e2e/__pycache__
