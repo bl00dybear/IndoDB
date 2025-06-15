@@ -1,5 +1,5 @@
 Database changed to 'test_transaction00'
-Error: Transaction already started
+Transaction started
 Table transaction_table00 created successfully!
 Transaction committed
 Transaction started
