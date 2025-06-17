@@ -1,5 +1,8 @@
 # IndoDB
 
+## 0. Demo
+https://youtu.be/KPZi1C0ZhdA
+
 ## 1. User Stories și Crearea Backlog-ului
 
 Am definit un set de **minimum 10 user stories** relevante pentru funcționalitățile proiectului, împreună cu **backlog-ul**.
